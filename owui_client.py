@@ -13,24 +13,19 @@ Expected image layout:
     images/
         <plotName>/
             <plotName>_run<XXXXXX>.png
-            ...
 
-Output layout (default, overwrite mode):
+Output layout (with run_id — preserves previous runs):
+    results/
+        <run_id>/
+            <plotName>/
+                <plotName>_<safe_model>_run<XXXXXX>.txt
+            summary_<run_id>.csv
+
+Output layout (no run_id — overwrites):
     results/
         <plotName>/
-            <safe_model_name>/
-                <plotName>_run<XXXXXX>.txt
-                ...
+            <plotName>_<safe_model>_run<XXXXXX>.txt
         summary.csv
-
-Output layout (with run_id):
-    results/
-        <plotName>/
-            <safe_model_name>/
-                <run_id>/
-                    <plotName>_run<XXXXXX>.txt
-                    ...
-        summary_<run_id>.csv
 """
 
 import base64
@@ -141,7 +136,6 @@ def query(
     """
     model = model or MODEL
 
-    # Build message content
     if image_path:
         content = [
             _image_content_block(image_path),
@@ -195,7 +189,7 @@ def query(
 # ---------------------------------------------------------------------------
 
 def _safe_model_name(model: str) -> str:
-    """Sanitise a model ID for use as a directory name."""
+    """Sanitise a model ID for use as part of a filename or directory name."""
     return model.replace("/", "_").replace(":", "_")
 
 
@@ -221,7 +215,6 @@ def _collect_images(
             ):
                 pairs.append((plot_name, img))
     else:
-        # Flat fallback: treat all images as belonging to a single "default" plot
         for img in sorted(
             p for p in image_root.iterdir()
             if p.is_file() and p.suffix.lower() in extensions
@@ -234,21 +227,29 @@ def _collect_images(
 def resolve_output_dir(
     output_root: Path,
     plot_name: str,
-    model: str,
     run_id: str | None,
 ) -> Path:
     """
-    Return the output directory for a given plot / model / run_id combination.
+    Return the output directory for a given plot / run_id combination.
 
-    With run_id    → <output_root>/<plot_name>/<safe_model>/<run_id>/
-    Without run_id → <output_root>/<plot_name>/<safe_model>/   (overwrite)
+    With run_id    → <output_root>/<run_id>/<plot_name>/
+    Without run_id → <output_root>/<plot_name>/   (overwrite)
     """
-    base = output_root / plot_name / _safe_model_name(model)
-    return base / run_id if run_id else base
+    if run_id:
+        return output_root / run_id / plot_name
+    return output_root / plot_name
+
+
+def resolve_output_file(out_dir: Path, image_path: Path, model: str) -> Path:
+    """
+    Build the output filename: <image_stem>_<safe_model>.txt
+    e.g. ecal_occupancy_run386593_llama3.2-vision_latest.txt
+    """
+    return out_dir / f"{image_path.stem}_{_safe_model_name(model)}.txt"
 
 
 # ---------------------------------------------------------------------------
-# Batch helpers
+# Batch
 # ---------------------------------------------------------------------------
 
 def batch_query_images(
@@ -266,17 +267,17 @@ def batch_query_images(
 ) -> list[dict]:
     """
     Iterate over all images in <image_root>/<plotName>/ × each model and
-    write responses to <output_root>/<plotName>/<safe_model>[/<run_id>]/.
+    write responses following the flat output layout.
 
     Parameters
     ----------
     prompt          : Prompt sent with every image.
     image_root      : Root folder containing per-plot subdirectories.
     models          : List of model IDs to iterate over.
-    output_root     : Root folder for results (mirrors image_root structure).
+    output_root     : Root folder for results.
     run_id          : Optional string tag (e.g. 'v1', 'baseline').
-                      If given, outputs go into a subdirectory of that name
-                      so previous results are preserved.
+                      If given, all outputs land under <output_root>/<run_id>/
+                      so previous runs are preserved.
                       If None (default), outputs overwrite previous results.
     system          : Optional system prompt applied to all queries.
     collection_ids  : Optional RAG collection UUIDs attached to every query.
@@ -286,7 +287,7 @@ def batch_query_images(
 
     Returns
     -------
-    List of result dicts, one per (plot_name, image, model) combination.
+    List of result dicts, one per (model, plot_name, image) combination.
     Each dict has keys: plot_name, image, model_used, response, latency_s, error.
     """
     image_root  = Path(image_root)
@@ -320,10 +321,9 @@ def batch_query_images(
             result["plot_name"] = plot_name
             results.append(result)
 
-            # Resolve output path
-            out_dir = resolve_output_dir(output_root, plot_name, model, run_id)
+            out_dir = resolve_output_dir(output_root, plot_name, run_id)
             out_dir.mkdir(parents=True, exist_ok=True)
-            out_file = out_dir / (image_path.stem + ".txt")
+            out_file = resolve_output_file(out_dir, image_path, model)
 
             with open(out_file, "w") as f:
                 f.write(f"Model:    {result['model_used']}\n")
@@ -346,3 +346,4 @@ def batch_query_images(
             time.sleep(delay)
 
     return results
+
