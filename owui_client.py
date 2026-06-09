@@ -42,19 +42,28 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-API_KEY  = os.environ.get("OWUI_API_KEY", "")
+OWUI_API_KEY  = os.environ.get("OWUI_API_KEY", "")
 OWUI_URL = os.environ.get("OWUI_URL", "https://openwebui.fnal.gov/").rstrip("/")
+LITELLM_API_KEY = os.environ.get("LITELLM_API_KEY", "")
+LITELLM_URL     = os.environ.get("LITELLM_URL", "").rstrip("/")
 MODEL    = os.environ.get("OWUI_MODEL", "")
 TIMEOUT  = int(os.environ.get("OWUI_TIMEOUT", "120"))
 
-if not API_KEY:
-    raise EnvironmentError("OWUI_API_KEY not set. Check your .env file.")
+if not OWUI_API_KEY:
+    raise EnvironmentError("OWUI_API_KEY not set -  needed for knowledge/RAG access.")
+if not LITELLM_API_KEY:
+    raise EnvironmentError("LITELLM_API_KEY not set - needed for model inference.")
 
-_HEADERS = {
-    "Authorization": f"Bearer {API_KEY}",
+# Knowledge/RAG calls: authenticated with OWUI key
+_OWUI_HEADERS = {
+    "Authorization": f"Bearer {OWUI_API_KEY}",
     "Content-Type": "application/json",
 }
-
+# Model inference + listing: authenticated with LiteLLM key
+_LITELLM_HEADERS = {
+    "Authorization": f"Bearer {LITELLM_API_KEY}",
+    "Content-Type": "application/json",
+}
 # ---------------------------------------------------------------------------
 # Image helpers
 # ---------------------------------------------------------------------------
@@ -92,17 +101,24 @@ def _image_content_block(image_path: str | Path) -> dict:
 # ---------------------------------------------------------------------------
 # Model / knowledge helpers
 # ---------------------------------------------------------------------------
-
-def list_models() -> list[str]:
-    """Return all model IDs available on this OpenWebUI instance."""
-    r = requests.get(f"{OWUI_URL}/api/models", headers=_HEADERS, timeout=30)
+def list_models(detail: bool = False) -> list:
+    """
+    Return available models — authenticated via LiteLLM key.
+ 
+    Parameters
+    ----------
+    detail : False (default) → list of model ID strings
+             True            → list of full model dicts from the API
+    """
+    r = requests.get(f"{LITELLM_URL}/v1/models", headers=_OWUI_HEADERS, timeout=30)
     r.raise_for_status()
-    return [m["id"] for m in r.json()["data"]]
+    models = r.json()["data"]
+    return models if detail else [m["id"] for m in models]
 
 
 def get_knowledge_map() -> dict[str, str]:
     """Return {name: id} for all knowledge collections visible to this user."""
-    r = requests.get(f"{OWUI_URL}/api/v1/knowledge/", headers=_HEADERS, timeout=30)
+    r = requests.get(f"{OWUI_URL}/api/v1/knowledge/", headers=_OWUI_HEADERS, timeout=30)
     r.raise_for_status()
     return {kb["name"]: kb["id"] for kb in r.json()["items"]}
 
@@ -159,7 +175,7 @@ def query(
     try:
         r = requests.post(
             f"{OWUI_URL}/api/chat/completions",
-            headers=_HEADERS,
+            headers=_OWUI_HEADERS,
             json=payload,
             timeout=TIMEOUT,
         )
