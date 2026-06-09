@@ -110,7 +110,7 @@ def list_models(detail: bool = False) -> list:
     detail : False (default) → list of model ID strings
              True            → list of full model dicts from the API
     """
-    r = requests.get(f"{LITELLM_URL}/v1/models", headers=_OWUI_HEADERS, timeout=30)
+    r = requests.get(f"{OWUI_URL}/v1/models", headers=_OWUI_HEADERS, timeout=30)
     r.raise_for_status()
     models = r.json()["data"]
     return models if detail else [m["id"] for m in models]
