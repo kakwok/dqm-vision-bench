@@ -1,0 +1,2530 @@
+[
+  {
+    "subsystem": "BeamMonitor",
+    "source_file": "shift_beam_layout.py",
+    "plots": [
+      {
+        "title": "00 - BeamMonitorHLT ReportSummary",
+        "path": "BeamMonitorHLT/EventInfo/reportSummaryMap",
+        "description": "BeamSpot summary map"
+      },
+      {
+        "title": "01 - d0-phi0 of selected tracks",
+        "path": "BeamMonitorHLT/Fit/d0_phi0",
+        "description": "d0-phi0 correlation of selected tracks - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftBeamMonitor>BeamMonitorOnlineDQMInstructions</a> "
+      },
+      {
+        "title": "02 - z0 of selected tracks",
+        "path": "BeamMonitorHLT/Fit/trk_z0",
+        "description": "Z0 distribution of selected tracks  - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftBeamMonitor>BeamMonitorOnlineDQMInstructions</a> "
+      },
+      {
+        "title": "03 - fit results beam spot",
+        "path": "BeamMonitorHLT/Fit/fitResults",
+        "description": "d_{0}-#phi correlation fit results of beam spot"
+      },
+      {
+        "title": "04 - fitted x0, sigma(x0) vs LS",
+        "path": "BeamMonitorHLT/Fit/x0_lumi",
+        "description": "x coordinate of beamspot vs LS"
+      },
+      {
+        "title": "04 - fitted x0, sigma(x0) vs LS",
+        "path": "BeamMonitorHLT/Fit/sigmaX0_lumi",
+        "description": "sigma X of beamspot vs LS"
+      },
+      {
+        "title": "05 - fitted y0, sigma(y0) vs LS",
+        "path": "BeamMonitorHLT/Fit/y0_lumi",
+        "description": "y coordinate of beamspot vs LS"
+      },
+      {
+        "title": "05 - fitted y0, sigma(y0) vs LS",
+        "path": "BeamMonitorHLT/Fit/sigmaY0_lumi",
+        "description": "sigma Y of beamspot vs LS"
+      },
+      {
+        "title": "06 - fitted z0, sigma(z0) vs LS",
+        "path": "BeamMonitorHLT/Fit/z0_lumi",
+        "description": "z coordinate of beamspot vs LS"
+      },
+      {
+        "title": "06 - fitted z0, sigma(z0) vs LS",
+        "path": "BeamMonitorHLT/Fit/sigmaZ0_lumi",
+        "description": "sigma Z of beamspot vs LS"
+      },
+      {
+        "title": "07 - chosen beam spot fit",
+        "path": "OnlineBeamMonitor/Validation/bsChoice",
+        "description": "chosen beam spot between Legacy or HLT fit, or fake beam spot"
+      }
+    ]
+  },
+  {
+    "subsystem": "BeamPixel",
+    "source_file": "shift_beampixel_layout.py",
+    "plots": [
+      {
+        "title": "00 - Report Summary Map",
+        "path": "BeamPixel/EventInfo/reportSummaryMap",
+        "description": "Pixel-Vertices Beam Spot: % Good Fits"
+      },
+      {
+        "title": "A - fit results",
+        "path": "BeamPixel/A - fit results",
+        "description": "Results of Beam Spot Fit"
+      },
+      {
+        "title": "B - muX vs lumi",
+        "path": "BeamPixel/B - muX vs lumi",
+        "description": "muX vs. Lumisection"
+      },
+      {
+        "title": "B - muY vs lumi",
+        "path": "BeamPixel/B - muY vs lumi",
+        "description": "muY vs. Lumisection"
+      },
+      {
+        "title": "B - muZ vs lumi",
+        "path": "BeamPixel/B - muZ vs lumi",
+        "description": "muZ vs. Lumisection"
+      },
+      {
+        "title": "C - sigmaX vs lumi",
+        "path": "BeamPixel/C - sigmaX vs lumi",
+        "description": "sigmaX vs. Lumisection"
+      },
+      {
+        "title": "C - sigmaY vs lumi",
+        "path": "BeamPixel/C - sigmaY vs lumi",
+        "description": "sigmaY vs. Lumisection"
+      },
+      {
+        "title": "C - sigmaZ vs lumi",
+        "path": "BeamPixel/C - sigmaZ vs lumi",
+        "description": "sigmaZ vs. Lumisection"
+      },
+      {
+        "title": "G - vertex x fit",
+        "path": "BeamPixel/G - vertex x fit",
+        "description": "Primary Vertex X Distribution (For Fit)"
+      },
+      {
+        "title": "G - vertex y fit",
+        "path": "BeamPixel/G - vertex y fit",
+        "description": "Primary Vertex Y Distribution (For Fit)"
+      },
+      {
+        "title": "G - vertex z fit",
+        "path": "BeamPixel/G - vertex z fit",
+        "description": "Primary Vertex Z Distribution (For Fit)"
+      }
+    ]
+  },
+  {
+    "subsystem": "P5_Cosmics",
+    "source_file": "shift_cosmic_layout.py",
+    "plots": [
+      {
+        "title": "00 - Tracking ReportSummary",
+        "path": "Tracking/EventInfo/reportSummaryMap",
+        "description": " Quality Test results plotted for Tracking parameters : Chi2, TrackRate, #of Hits in Track - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "01 - SiStrip ReportSummary",
+        "path": "SiStrip/EventInfo/reportSummaryMap",
+        "description": "Overall Report Summary where detector fraction and S/N flags are combined together -  <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "02 - DT ReportSummary",
+        "path": "DT/EventInfo/reportSummaryMap",
+        "description": "<a href=https://twiki.cern.ch/twiki/bin/view/CMS/DTDQMPlots>Description and Instructions</a>"
+      },
+      {
+        "title": "03 - CSC ReportSummary",
+        "path": "CSC/EventInfo/reportSummaryMap",
+        "description": "For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftCSC#reportSummaryMap\">here</a>."
+      },
+      {
+        "title": "04 - RPC ReportSummary",
+        "path": "RPC/EventInfo/reportSummaryMap",
+        "description": "summary map for rpc, this is NOT an efficiency measurement   >>> <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftRPC>Description</a>"
+      },
+      {
+        "title": "05 - Tracks (Cosmic Tracking)",
+        "path": "Tracking/TrackParameters/GeneralProperties/NumberOfTracks_CKFTk",
+        "description": "Number of cosmic tracks  - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "05 - Tracks (Cosmic Tracking)",
+        "path": "Tracking/TrackParameters/HitProperties/NumberOfRecHitsPerTrack_CKFTk",
+        "description": "Number of RecHits per track - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "05 - Tracks (Cosmic Tracking)",
+        "path": "Tracking/TrackParameters/GeneralProperties/TrackPt_CKFTk",
+        "description": "Pt of cosmic track - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "05 - Tracks (Cosmic Tracking)",
+        "path": "Tracking/TrackParameters/GeneralProperties/Chi2oNDF_CKFTk",
+        "description": "Chi Sqare per DoF - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "05 - Tracks (Cosmic Tracking)",
+        "path": "Tracking/TrackParameters/GeneralProperties/TrackPhi_CKFTk",
+        "description": "Phi distribution of cosmic tracks -  <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "05 - Tracks (Cosmic Tracking)",
+        "path": "Tracking/TrackParameters/GeneralProperties/TrackEta_CKFTk",
+        "description": " Eta distribution of cosmic tracks - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "06 - # of Cluster Trend",
+        "path": "SiStrip/MechanicalView/TIB/TotalNumberOfClusterProfile__TIB",
+        "description": "Total # of Clusters in TIB with event time in Seconds  - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "06 - # of Cluster Trend",
+        "path": "SiStrip/MechanicalView/TOB/TotalNumberOfClusterProfile__TOB",
+        "description": "Total # of Clusters in TOB with event time in Seconds  - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "06 - # of Cluster Trend",
+        "path": "SiStrip/MechanicalView/TID/MINUS/TotalNumberOfClusterProfile__TID__MINUS",
+        "description": "Total # of Clusters in TID -ve side with event time in Seconds  - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "06 - # of Cluster Trend",
+        "path": "SiStrip/MechanicalView/TID/PLUS/TotalNumberOfClusterProfile__TID__PLUS",
+        "description": "Total # of Clusters in TID +ve side with event time in Seconds  - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "06 - # of Cluster Trend",
+        "path": "SiStrip/MechanicalView/TEC/MINUS/TotalNumberOfClusterProfile__TEC__MINUS",
+        "description": "Total # of Clusters in TEC -ve side with event time in Seconds  - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "06 - # of Cluster Trend",
+        "path": "SiStrip/MechanicalView/TEC/PLUS/TotalNumberOfClusterProfile__TEC__PLUS",
+        "description": "Total # of Clusters in TEC +ve side with event time in Seconds  - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "07 OnTrackCluster",
+        "path": "SiStrip/MechanicalView/TIB/Summary_ClusterStoNCorr_OnTrack__TIB",
+        "description": "Signal-to-Noise (corrected for the angle) for On-Track clusters in TIB  - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "07 OnTrackCluster",
+        "path": "SiStrip/MechanicalView/TOB/Summary_ClusterStoNCorr_OnTrack__TOB",
+        "description": "Signal-to-Noise (corrected for the angle) for On-Track clusters in TOB  - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "07 OnTrackCluster",
+        "path": "SiStrip/MechanicalView/TID/MINUS/Summary_ClusterStoNCorr_OnTrack__TID__MINUS",
+        "description": "Signal-to-Noise (corrected for the angle) for On-Track clusters in TID -ve side - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "07 OnTrackCluster",
+        "path": "SiStrip/MechanicalView/TID/PLUS/Summary_ClusterStoNCorr_OnTrack__TID__PLUS",
+        "description": "Signal-to-Noise (corrected for the angle) for On-Track clusters in TID +ve side - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "07 OnTrackCluster",
+        "path": "SiStrip/MechanicalView/TEC/MINUS/Summary_ClusterStoNCorr_OnTrack__TEC__MINUS",
+        "description": "Signal-to-Noise (corrected for the angle) for On-Track clusters in TEC -ve side - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "07 OnTrackCluster",
+        "path": "SiStrip/MechanicalView/TEC/PLUS/Summary_ClusterStoNCorr_OnTrack__TEC__PLUS",
+        "description": "Signal-to-Noise (corrected for the angle) for On-Track clusters in TEC +ve side - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "08 CSC Physics Efficiency - RecHits Minus",
+        "path": "CSC/CSCOfflineMonitor/recHits/hRHGlobalm1",
+        "description": "Histogram shows 2D RecHits distribution in ME-1. Any unusual inhomogeneity should be reported. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/viewauth/CMS/CSCDPGDataMonitorShiftInstructions\">here</a>."
+      },
+      {
+        "title": "08 CSC Physics Efficiency - RecHits Minus",
+        "path": "CSC/CSCOfflineMonitor/recHits/hRHGlobalm2",
+        "description": "Histogram shows 2D RecHits distribution in ME-2. Any unusual inhomogeneity should be reported. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/viewauth/CMS/CSCDPGDataMonitorShiftInstructions\">here</a>."
+      },
+      {
+        "title": "08 CSC Physics Efficiency - RecHits Minus",
+        "path": "CSC/CSCOfflineMonitor/recHits/hRHGlobalm3",
+        "description": "Histogram shows 2D RecHits distribution in ME-3. Any unusual inhomogeneity should be reported. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/viewauth/CMS/CSCDPGDataMonitorShiftInstructions\">here</a>."
+      },
+      {
+        "title": "08 CSC Physics Efficiency - RecHits Minus",
+        "path": "CSC/CSCOfflineMonitor/recHits/hRHGlobalm4",
+        "description": "Histogram shows 2D RecHits distribution in ME-4. Any unusual inhomogeneity should be reported. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/viewauth/CMS/CSCDPGDataMonitorShiftInstructions\">here</a>."
+      },
+      {
+        "title": "09 CSC Physics Efficiency - RecHits Plus",
+        "path": "CSC/CSCOfflineMonitor/recHits/hRHGlobalp1",
+        "description": "Histogram shows 2D RecHits distribution in ME+1. Any unusual inhomogeneity should be reported. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/viewauth/CMS/CSCDPGDataMonitorShiftInstructions\">here</a>."
+      },
+      {
+        "title": "09 CSC Physics Efficiency - RecHits Plus",
+        "path": "CSC/CSCOfflineMonitor/recHits/hRHGlobalp2",
+        "description": "Histogram shows 2D RecHits distribution in ME+2. Any unusual inhomogeneity should be reported. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/viewauth/CMS/CSCDPGDataMonitorShiftInstructions\">here</a>."
+      },
+      {
+        "title": "09 CSC Physics Efficiency - RecHits Plus",
+        "path": "CSC/CSCOfflineMonitor/recHits/hRHGlobalp3",
+        "description": "Histogram shows 2D RecHits distribution in ME+3. Any unusual inhomogeneity should be reported. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/viewauth/CMS/CSCDPGDataMonitorShiftInstructions\">here</a>."
+      },
+      {
+        "title": "09 CSC Physics Efficiency - RecHits Plus",
+        "path": "CSC/CSCOfflineMonitor/recHits/hRHGlobalp4",
+        "description": "Histogram shows 2D RecHits distribution in ME+4. Any unusual inhomogeneity should be reported. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/viewauth/CMS/CSCDPGDataMonitorShiftInstructions\">here</a>."
+      },
+      {
+        "title": "10 - RPC_Occupancy",
+        "path": "RPC/AllHits/SummaryHistograms/Occupancy_for_Barrel",
+        "description": "Occupancy per sector   >>> <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftRPC>Description</a>"
+      },
+      {
+        "title": "10 - RPC_Occupancy",
+        "path": "RPC/AllHits/SummaryHistograms/Occupancy_for_Endcap",
+        "description": "Occupancy per sector   >>> <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftRPC>Description</a>"
+      },
+      {
+        "title": "11 - uGMT MUON P_{T}",
+        "path": "L1T/L1TStage2uGMT/ugmtMuonPt",
+        "description": "This should show normal pT spectrum (spikes at 140 GeV, 200 GeV and 255 GeV expected from max TF pT assigned)"
+      },
+      {
+        "title": "12 - uGMT MUON ETA",
+        "path": "L1T/L1TStage2uGMT/ugmtMuonEta",
+        "description": "This should have no spikes."
+      },
+      {
+        "title": "13 - uGMT MUON PHI",
+        "path": "L1T/L1TStage2uGMT/ugmtMuonPhi",
+        "description": "This should have no spikes or dips."
+      }
+    ]
+  },
+  {
+    "subsystem": "CSC",
+    "source_file": "shift_csc_layout.py",
+    "plots": [
+      {
+        "title": "00 Chamber Status (Statistically Significant)",
+        "path": "CSC/EventInfo/reportSummaryMap",
+        "description": "For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftCSC#reportSummaryMap\">here</a>."
+      },
+      {
+        "title": "01 Chamber Occupancy Exceptions (Statistically Significant)",
+        "path": "CSC/Summary/CSC_STATS_occupancy",
+        "description": "For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftCSC#CSC_STATS_occupancy\">here</a>."
+      },
+      {
+        "title": "02 Chamber Errors and Warnings (Statistically Significant)",
+        "path": "CSC/Summary/CSC_STATS_format_err",
+        "description": "For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftCSC#CSC_STATS_format_err\">here</a>."
+      },
+      {
+        "title": "02 Chamber Errors and Warnings (Statistically Significant)",
+        "path": "CSC/Summary/CSC_STATS_l1sync_err",
+        "description": "For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftCSC#CSC_STATS_l1sync_err\">here</a>."
+      },
+      {
+        "title": "02 Chamber Errors and Warnings (Statistically Significant)",
+        "path": "CSC/Summary/CSC_STATS_fifofull_err",
+        "description": "For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftCSC#CSC_STATS_fifofull_err\">here</a>."
+      },
+      {
+        "title": "02 Chamber Errors and Warnings (Statistically Significant)",
+        "path": "CSC/Summary/CSC_STATS_inputto_err",
+        "description": "For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftCSC#CSC_STATS_inputto_err\">here</a>."
+      },
+      {
+        "title": "03 Chambers without Data (Statistically Significant)",
+        "path": "CSC/Summary/CSC_STATS_wo_alct",
+        "description": "For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftCSC#CSC_STATS_wo_alct\">here</a>."
+      },
+      {
+        "title": "03 Chambers without Data (Statistically Significant)",
+        "path": "CSC/Summary/CSC_STATS_wo_clct",
+        "description": "For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftCSC#CSC_STATS_wo_clct\">here</a>."
+      },
+      {
+        "title": "03 Chambers without Data (Statistically Significant)",
+        "path": "CSC/Summary/CSC_STATS_wo_cfeb",
+        "description": "For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftCSC#CSC_STATS_wo_cfeb\">here</a>."
+      },
+      {
+        "title": "03 Chambers without Data (Statistically Significant)",
+        "path": "CSC/Summary/CSC_STATS_cfeb_bwords",
+        "description": "For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftCSC#CSC_STATS_cfeb_bwords\">here</a>."
+      },
+      {
+        "title": "04 Physics Efficiency - RecHits Minus",
+        "path": "CSC/CSCOfflineMonitor/recHits/hRHGlobalm1",
+        "description": "Histogram shows 2D RecHits distribution in ME-1. Any unusual inhomogeneity should be reported. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/viewauth/CMS/CSCDPGDataMonitorShiftInstructions\">here</a>."
+      },
+      {
+        "title": "04 Physics Efficiency - RecHits Minus",
+        "path": "CSC/CSCOfflineMonitor/recHits/hRHGlobalm2",
+        "description": "Histogram shows 2D RecHits distribution in ME-2. Any unusual inhomogeneity should be reported. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/viewauth/CMS/CSCDPGDataMonitorShiftInstructions\">here</a>."
+      },
+      {
+        "title": "04 Physics Efficiency - RecHits Minus",
+        "path": "CSC/CSCOfflineMonitor/recHits/hRHGlobalm3",
+        "description": "Histogram shows 2D RecHits distribution in ME-3. Any unusual inhomogeneity should be reported. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/viewauth/CMS/CSCDPGDataMonitorShiftInstructions\">here</a>."
+      },
+      {
+        "title": "04 Physics Efficiency - RecHits Minus",
+        "path": "CSC/CSCOfflineMonitor/recHits/hRHGlobalm4",
+        "description": "Histogram shows 2D RecHits distribution in ME-4. Any unusual inhomogeneity should be reported. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/viewauth/CMS/CSCDPGDataMonitorShiftInstructions\">here</a>."
+      },
+      {
+        "title": "05 Physics Efficiency - RecHits Plus",
+        "path": "CSC/CSCOfflineMonitor/recHits/hRHGlobalp1",
+        "description": "Histogram shows 2D RecHits distribution in ME+1. Any unusual inhomogeneity should be reported. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/viewauth/CMS/CSCDPGDataMonitorShiftInstructions\">here</a>."
+      },
+      {
+        "title": "05 Physics Efficiency - RecHits Plus",
+        "path": "CSC/CSCOfflineMonitor/recHits/hRHGlobalp2",
+        "description": "Histogram shows 2D RecHits distribution in ME+2. Any unusual inhomogeneity should be reported. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/viewauth/CMS/CSCDPGDataMonitorShiftInstructions\">here</a>."
+      },
+      {
+        "title": "05 Physics Efficiency - RecHits Plus",
+        "path": "CSC/CSCOfflineMonitor/recHits/hRHGlobalp3",
+        "description": "Histogram shows 2D RecHits distribution in ME+3. Any unusual inhomogeneity should be reported. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/viewauth/CMS/CSCDPGDataMonitorShiftInstructions\">here</a>."
+      },
+      {
+        "title": "05 Physics Efficiency - RecHits Plus",
+        "path": "CSC/CSCOfflineMonitor/recHits/hRHGlobalp4",
+        "description": "Histogram shows 2D RecHits distribution in ME+4. Any unusual inhomogeneity should be reported. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/viewauth/CMS/CSCDPGDataMonitorShiftInstructions\">here</a>."
+      }
+    ]
+  },
+  {
+    "subsystem": "CTPPS",
+    "source_file": "shift_ctpps_layout.py",
+    "plots": [
+      {
+        "title": "TrackingStrip/planes contributing to fit UV",
+        "path": "CTPPS/TrackingStrip/sector 45/station 210/nr_hr/planes contributing to fit U",
+        "description": null
+      },
+      {
+        "title": "TrackingStrip/planes contributing to fit UV",
+        "path": "CTPPS/TrackingStrip/sector 45/station 210/fr_hr/planes contributing to fit U",
+        "description": null
+      },
+      {
+        "title": "TrackingStrip/planes contributing to fit UV",
+        "path": "CTPPS/TrackingStrip/sector 56/station 210/nr_hr/planes contributing to fit U",
+        "description": null
+      },
+      {
+        "title": "TrackingStrip/planes contributing to fit UV",
+        "path": "CTPPS/TrackingStrip/sector 56/station 210/fr_hr/planes contributing to fit U",
+        "description": null
+      },
+      {
+        "title": "TrackingStrip/activity per BX (short)",
+        "path": "CTPPS/events per BX (short)",
+        "description": null
+      },
+      {
+        "title": "TrackingPixel/hits position:sector 45 station 210 fr_hr",
+        "path": "CTPPS/TrackingPixel/sector 45/station 210/fr_hr/plane_0/hits position",
+        "description": null
+      },
+      {
+        "title": "TrackingPixel/hits position:sector 45 station 210 fr_hr",
+        "path": "CTPPS/TrackingPixel/sector 45/station 210/fr_hr/plane_1/hits position",
+        "description": null
+      },
+      {
+        "title": "TrackingPixel/hits position:sector 45 station 210 fr_hr",
+        "path": "CTPPS/TrackingPixel/sector 45/station 210/fr_hr/plane_2/hits position",
+        "description": null
+      },
+      {
+        "title": "TrackingPixel/hits position:sector 45 station 210 fr_hr",
+        "path": "CTPPS/TrackingPixel/sector 45/station 210/fr_hr/plane_3/hits position",
+        "description": null
+      },
+      {
+        "title": "TrackingPixel/hits position:sector 45 station 210 fr_hr",
+        "path": "CTPPS/TrackingPixel/sector 45/station 210/fr_hr/plane_4/hits position",
+        "description": null
+      },
+      {
+        "title": "TrackingPixel/hits position:sector 45 station 210 fr_hr",
+        "path": "CTPPS/TrackingPixel/sector 45/station 210/fr_hr/plane_5/hits position",
+        "description": null
+      },
+      {
+        "title": "TrackingPixel/hits position:sector 45 station 220 fr_hr",
+        "path": "CTPPS/TrackingPixel/sector 45/station 220/fr_hr/plane_0/hits position",
+        "description": null
+      },
+      {
+        "title": "TrackingPixel/hits position:sector 45 station 220 fr_hr",
+        "path": "CTPPS/TrackingPixel/sector 45/station 220/fr_hr/plane_1/hits position",
+        "description": null
+      },
+      {
+        "title": "TrackingPixel/hits position:sector 45 station 220 fr_hr",
+        "path": "CTPPS/TrackingPixel/sector 45/station 220/fr_hr/plane_2/hits position",
+        "description": null
+      },
+      {
+        "title": "TrackingPixel/hits position:sector 45 station 220 fr_hr",
+        "path": "CTPPS/TrackingPixel/sector 45/station 220/fr_hr/plane_3/hits position",
+        "description": null
+      },
+      {
+        "title": "TrackingPixel/hits position:sector 45 station 220 fr_hr",
+        "path": "CTPPS/TrackingPixel/sector 45/station 220/fr_hr/plane_4/hits position",
+        "description": null
+      },
+      {
+        "title": "TrackingPixel/hits position:sector 45 station 220 fr_hr",
+        "path": "CTPPS/TrackingPixel/sector 45/station 220/fr_hr/plane_5/hits position",
+        "description": null
+      },
+      {
+        "title": "TrackingPixel/hits position:sector 56 station 210 fr_hr",
+        "path": "CTPPS/TrackingPixel/sector 56/station 210/fr_hr/plane_0/hits position",
+        "description": null
+      },
+      {
+        "title": "TrackingPixel/hits position:sector 56 station 210 fr_hr",
+        "path": "CTPPS/TrackingPixel/sector 56/station 210/fr_hr/plane_1/hits position",
+        "description": null
+      },
+      {
+        "title": "TrackingPixel/hits position:sector 56 station 210 fr_hr",
+        "path": "CTPPS/TrackingPixel/sector 56/station 210/fr_hr/plane_2/hits position",
+        "description": null
+      },
+      {
+        "title": "TrackingPixel/hits position:sector 56 station 210 fr_hr",
+        "path": "CTPPS/TrackingPixel/sector 56/station 210/fr_hr/plane_3/hits position",
+        "description": null
+      },
+      {
+        "title": "TrackingPixel/hits position:sector 56 station 210 fr_hr",
+        "path": "CTPPS/TrackingPixel/sector 56/station 210/fr_hr/plane_4/hits position",
+        "description": null
+      },
+      {
+        "title": "TrackingPixel/hits position:sector 56 station 210 fr_hr",
+        "path": "CTPPS/TrackingPixel/sector 56/station 210/fr_hr/plane_5/hits position",
+        "description": null
+      },
+      {
+        "title": "TrackingPixel/hits position:sector 56 station 220 fr_hr",
+        "path": "CTPPS/TrackingPixel/sector 56/station 220/fr_hr/plane_0/hits position",
+        "description": null
+      },
+      {
+        "title": "TrackingPixel/hits position:sector 56 station 220 fr_hr",
+        "path": "CTPPS/TrackingPixel/sector 56/station 220/fr_hr/plane_1/hits position",
+        "description": null
+      },
+      {
+        "title": "TrackingPixel/hits position:sector 56 station 220 fr_hr",
+        "path": "CTPPS/TrackingPixel/sector 56/station 220/fr_hr/plane_2/hits position",
+        "description": null
+      },
+      {
+        "title": "TrackingPixel/hits position:sector 56 station 220 fr_hr",
+        "path": "CTPPS/TrackingPixel/sector 56/station 220/fr_hr/plane_3/hits position",
+        "description": null
+      },
+      {
+        "title": "TrackingPixel/hits position:sector 56 station 220 fr_hr",
+        "path": "CTPPS/TrackingPixel/sector 56/station 220/fr_hr/plane_4/hits position",
+        "description": null
+      },
+      {
+        "title": "TrackingPixel/hits position:sector 56 station 220 fr_hr",
+        "path": "CTPPS/TrackingPixel/sector 56/station 220/fr_hr/plane_5/hits position",
+        "description": null
+      },
+      {
+        "title": "TimingDiamond/active planes",
+        "path": "CTPPS/TimingDiamond/sector 45/station 220cyl/cyl_hr/active planes",
+        "description": "It should be with peaks at 0 and 4"
+      },
+      {
+        "title": "TimingDiamond/active planes",
+        "path": "CTPPS/TimingDiamond/sector 45/station 220/nr_hr/active planes",
+        "description": "It should be with peaks at 0 and 4"
+      },
+      {
+        "title": "TimingDiamond/active planes",
+        "path": "CTPPS/TimingDiamond/sector 56/station 220cyl/cyl_hr/active planes",
+        "description": "It should be with peaks at 0 and 4"
+      },
+      {
+        "title": "TimingDiamond/active planes",
+        "path": "CTPPS/TimingDiamond/sector 56/station 220/nr_hr/active planes",
+        "description": "It should be with peaks at 0 and 4"
+      },
+      {
+        "title": "TimingDiamond/event category",
+        "path": "CTPPS/TimingDiamond/sector 45/station 220cyl/cyl_hr/event category",
+        "description": "Most of the event should be in \"both\""
+      },
+      {
+        "title": "TimingDiamond/event category",
+        "path": "CTPPS/TimingDiamond/sector 45/station 220/nr_hr/event category",
+        "description": "Most of the event should be in \"both\""
+      },
+      {
+        "title": "TimingDiamond/event category",
+        "path": "CTPPS/TimingDiamond/sector 56/station 220cyl/cyl_hr/event category",
+        "description": "Most of the event should be in \"both\""
+      },
+      {
+        "title": "TimingDiamond/event category",
+        "path": "CTPPS/TimingDiamond/sector 56/station 220/nr_hr/event category",
+        "description": "Most of the event should be in \"both\""
+      },
+      {
+        "title": "TimingDiamond/time over threshold",
+        "path": "CTPPS/TimingDiamond/sector 45/station 220cyl/cyl_hr/time over threshold",
+        "description": "It should be a broad distribution peaked around 12 ns"
+      },
+      {
+        "title": "TimingDiamond/time over threshold",
+        "path": "CTPPS/TimingDiamond/sector 45/station 220/nr_hr/time over threshold",
+        "description": "It should be a broad distribution peaked around 12 ns"
+      },
+      {
+        "title": "TimingDiamond/time over threshold",
+        "path": "CTPPS/TimingDiamond/sector 56/station 220cyl/cyl_hr/time over threshold",
+        "description": "It should be a broad distribution peaked around 12 ns"
+      },
+      {
+        "title": "TimingDiamond/time over threshold",
+        "path": "CTPPS/TimingDiamond/sector 56/station 220/nr_hr/time over threshold",
+        "description": "It should be a broad distribution peaked around 12 ns"
+      },
+      {
+        "title": "TimingDiamond/hits in planes",
+        "path": "CTPPS/TimingDiamond/sector 45/station 220cyl/cyl_hr/hits in planes",
+        "description": "It should be full"
+      },
+      {
+        "title": "TimingDiamond/hits in planes",
+        "path": "CTPPS/TimingDiamond/sector 45/station 220/nr_hr/hits in planes",
+        "description": "It should be full"
+      },
+      {
+        "title": "TimingDiamond/hits in planes",
+        "path": "CTPPS/TimingDiamond/sector 56/station 220cyl/cyl_hr/hits in planes",
+        "description": "It should be full"
+      },
+      {
+        "title": "TimingDiamond/hits in planes",
+        "path": "CTPPS/TimingDiamond/sector 56/station 220/nr_hr/hits in planes",
+        "description": "It should be full"
+      },
+      {
+        "title": "TimingDiamond/hits in planes lumisection",
+        "path": "CTPPS/TimingDiamond/sector 45/station 220cyl/cyl_hr/hits in planes lumisection",
+        "description": "It should be similar to \"hits in planes\""
+      },
+      {
+        "title": "TimingDiamond/hits in planes lumisection",
+        "path": "CTPPS/TimingDiamond/sector 45/station 220/nr_hr/hits in planes lumisection",
+        "description": "It should be similar to \"hits in planes\""
+      },
+      {
+        "title": "TimingDiamond/hits in planes lumisection",
+        "path": "CTPPS/TimingDiamond/sector 56/station 220cyl/cyl_hr/hits in planes lumisection",
+        "description": "It should be similar to \"hits in planes\""
+      },
+      {
+        "title": "TimingDiamond/hits in planes lumisection",
+        "path": "CTPPS/TimingDiamond/sector 56/station 220/nr_hr/hits in planes lumisection",
+        "description": "It should be similar to \"hits in planes\""
+      },
+      {
+        "title": "TimingDiamond/HPTDC Errors",
+        "path": "CTPPS/TimingDiamond/sector 45/station 220cyl/cyl_hr/HPTDC Errors",
+        "description": "It should be empty"
+      },
+      {
+        "title": "TimingDiamond/HPTDC Errors",
+        "path": "CTPPS/TimingDiamond/sector 45/station 220/nr_hr/HPTDC Errors",
+        "description": "It should be empty"
+      },
+      {
+        "title": "TimingDiamond/HPTDC Errors",
+        "path": "CTPPS/TimingDiamond/sector 56/station 220cyl/cyl_hr/HPTDC Errors",
+        "description": "It should be empty"
+      },
+      {
+        "title": "TimingDiamond/HPTDC Errors",
+        "path": "CTPPS/TimingDiamond/sector 56/station 220/nr_hr/HPTDC Errors",
+        "description": "It should be empty"
+      }
+    ]
+  },
+  {
+    "subsystem": "DT",
+    "source_file": "shift_dt_layout.py",
+    "plots": [
+      {
+        "title": "00-ROChannelSummary",
+        "path": "DT/00-ROChannels/ROChannelSummary",
+        "description": "<a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftDT>Description and Instructions</a>"
+      },
+      {
+        "title": "01-OccupancySummary",
+        "path": "DT/01-Digi/OccupancyGlbSummary",
+        "description": "<a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftDT>Description and Instructions</a>"
+      },
+      {
+        "title": "02-SegmentSummary",
+        "path": "DT/02-Segments/SegmentGlbSummary",
+        "description": "<a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftDT>Description and Instructions</a>"
+      },
+      {
+        "title": "03-TM-TriggerCorrFractionSummary",
+        "path": "DT/03-LocalTrigger-TM/TM_CorrFractionSummaryIn",
+        "description": "<a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftDT>Description and Instructions</a>"
+      },
+      {
+        "title": "04-SynchNoiseSummary",
+        "path": "DT/05-Noise/SynchNoise/SynchNoiseSummary",
+        "description": "<a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftDT>Description and Instructions</a>"
+      },
+      {
+        "title": "05-NoiseSummary",
+        "path": "DT/05-Noise/NoiseSummary",
+        "description": "<a href=https://twiki.cern.ch/twiki/bin/viewauth/CMS/DQMShiftDT>Description for the <b>Central DQM Offline shifter</b></a>"
+      }
+    ]
+  },
+  {
+    "subsystem": "Ecal",
+    "source_file": "shift_ecal_layout.py",
+    "plots": [
+      {
+        "title": "00 Summary",
+        "path": "EcalBarrel/EBSummaryClient/EB global summary",
+        "description": "Summary of the data quality. A channel is red if it is red in any one of RawData, Integrity, Timing, TriggerPrimitives, and HotCells task. A cluster of bad towers in this plot will cause the ReportSummary for the FED to go to 0 in online DQM."
+      },
+      {
+        "title": "00 Summary",
+        "path": "EcalEndcap/EESummaryClient/EE global summary EE -",
+        "description": "Summary of the data quality. A channel is red if it is red in any one of RawData, Integrity, Timing, TriggerPrimitives, and HotCells task. A cluster of bad towers in this plot will cause the ReportSummary for the FED to go to 0 in online DQM."
+      },
+      {
+        "title": "00 Summary",
+        "path": "EcalEndcap/EESummaryClient/EE global summary EE +",
+        "description": "Summary of the data quality. A channel is red if it is red in any one of RawData, Integrity, Timing, TriggerPrimitives, and HotCells task. A cluster of bad towers in this plot will cause the ReportSummary for the FED to go to 0 in online DQM."
+      },
+      {
+        "title": "01 FE Status",
+        "path": "EcalBarrel/EBSummaryClient/EBSFT front-end status summary",
+        "description": "Summary of the raw data (DCC and front-end) quality. A channel is red if it has 400 or more events with FE status that is different from any of ENABLED, DISABLED, SUPPRESSED, FIFOFULL, FIFOFULL_L1ADESYNC, and FORCEDZS. A FED can also go red if its number of L1A desynchronization errors is greater than 1.0 * log10(total entries)."
+      },
+      {
+        "title": "01 FE Status",
+        "path": "EcalEndcap/EESummaryClient/EESFT EE - front-end status summary",
+        "description": "Summary of the raw data (DCC and front-end) quality. A channel is red if it has 400 or more events with FE status that is different from any of ENABLED, DISABLED, SUPPRESSED, FIFOFULL, FIFOFULL_L1ADESYNC, and FORCEDZS. A FED can also go red if its number of L1A desynchronization errors is greater than 1.0 * log10(total entries)."
+      },
+      {
+        "title": "01 FE Status",
+        "path": "EcalEndcap/EESummaryClient/EESFT EE + front-end status summary",
+        "description": "Summary of the raw data (DCC and front-end) quality. A channel is red if it has 400 or more events with FE status that is different from any of ENABLED, DISABLED, SUPPRESSED, FIFOFULL, FIFOFULL_L1ADESYNC, and FORCEDZS. A FED can also go red if its number of L1A desynchronization errors is greater than 1.0 * log10(total entries)."
+      },
+      {
+        "title": "02 Integrity",
+        "path": "EcalBarrel/EBSummaryClient/EBIT integrity quality summary",
+        "description": "Summary of the data integrity. A channel is red if more than 0.01 of its entries have integrity errors. Also, an entire SuperModule can show red if there are more than 50 DCC-SRP or DCC-TCC Desync errors."
+      },
+      {
+        "title": "02 Integrity",
+        "path": "EcalEndcap/EESummaryClient/EEIT EE - integrity quality summary",
+        "description": "Summary of the data integrity. A channel is red if more than 0.01 of its entries have integrity errors. Also, an entire SuperModule can show red if there are more than 50 DCC-SRP or DCC-TCC Desync errors."
+      },
+      {
+        "title": "02 Integrity",
+        "path": "EcalEndcap/EESummaryClient/EEIT EE + integrity quality summary",
+        "description": "Summary of the data integrity. A channel is red if more than 0.01 of its entries have integrity errors. Also, an entire SuperModule can show red if there are more than 50 DCC-SRP or DCC-TCC Desync errors."
+      },
+      {
+        "title": "03 Occupancy",
+        "path": "EcalBarrel/EBOccupancyTask/EBOT digi occupancy",
+        "description": "Digi occupancy."
+      },
+      {
+        "title": "03 Occupancy",
+        "path": "EcalEndcap/EEOccupancyTask/EEOT digi occupancy EE -",
+        "description": "Digi occupancy."
+      },
+      {
+        "title": "03 Occupancy",
+        "path": "EcalEndcap/EEOccupancyTask/EEOT digi occupancy EE +",
+        "description": "Digi occupancy."
+      },
+      {
+        "title": "04 Noise",
+        "path": "EcalBarrel/EBSummaryClient/EBPOT pedestal quality summary G12",
+        "description": "Summary of the presample data quality. A channel is red if presample mean is outside the range (175.0, 260.0) or (175.0, 300.0) for the forward region, or RMS is greater than 6.0. Channels with entries less than 6 are not considered."
+      },
+      {
+        "title": "04 Noise",
+        "path": "EcalEndcap/EESummaryClient/EEPOT EE - pedestal quality summary G12",
+        "description": "Summary of the presample data quality. A channel is red if presample mean is outside the range (175.0, 260.0) or (175.0, 300.0) for the forward region, or RMS is greater than 6.0. Channels with entries less than 6 are not considered."
+      },
+      {
+        "title": "04 Noise",
+        "path": "EcalEndcap/EESummaryClient/EEPOT EE + pedestal quality summary G12",
+        "description": "Summary of the presample data quality. A channel is red if presample mean is outside the range (175.0, 260.0) or (175.0, 300.0) for the forward region, or RMS is greater than 6.0. Channels with entries less than 6 are not considered."
+      },
+      {
+        "title": "05 RecHit Energy",
+        "path": "EcalBarrel/EBSummaryClient/EBOT energy summary",
+        "description": "2D distribution of the mean rec hit energy."
+      },
+      {
+        "title": "05 RecHit Energy",
+        "path": "EcalEndcap/EESummaryClient/EEOT EE - energy summary",
+        "description": "2D distribution of the mean rec hit energy."
+      },
+      {
+        "title": "05 RecHit Energy",
+        "path": "EcalEndcap/EESummaryClient/EEOT EE + energy summary",
+        "description": "2D distribution of the mean rec hit energy."
+      },
+      {
+        "title": "06 Timing",
+        "path": "EcalBarrel/EBSummaryClient/EBTMT timing quality summary",
+        "description": "Summary of the timing data quality. A 5x5 tower is red if the mean timing of the tower is off by more than 2.0 for EB and 3.0 for EE, or RMS is greater than 6.0 (6.0 and 12.0 in forward region). Towers with total entries less than 3 (or 24 in forward region) are not subject to this evaluation. Since 5x5 tower timings are calculated with a tighter time-window than per-channel timings, a tower can additionally become red if its the sum of per-channel timing histogram entries is greater than per-tower histogram entries by factor 1.66666666667 (significant fraction of events fall outside the tight time-window)."
+      },
+      {
+        "title": "06 Timing",
+        "path": "EcalEndcap/EESummaryClient/EETMT EE - timing quality summary",
+        "description": "Summary of the timing data quality. A 5x5 tower is red if the mean timing of the tower is off by more than 2.0 for EB and 3.0 for EE, or RMS is greater than 6.0 (6.0 and 12.0 in forward region). Towers with total entries less than 3 (or 24 in forward region) are not subject to this evaluation. Since 5x5 tower timings are calculated with a tighter time-window than per-channel timings, a tower can additionally become red if its the sum of per-channel timing histogram entries is greater than per-tower histogram entries by factor 1.66666666667 (significant fraction of events fall outside the tight time-window)."
+      },
+      {
+        "title": "06 Timing",
+        "path": "EcalEndcap/EESummaryClient/EETMT EE + timing quality summary",
+        "description": "Summary of the timing data quality. A 5x5 tower is red if the mean timing of the tower is off by more than 2.0 for EB and 3.0 for EE, or RMS is greater than 6.0 (6.0 and 12.0 in forward region). Towers with total entries less than 3 (or 24 in forward region) are not subject to this evaluation. Since 5x5 tower timings are calculated with a tighter time-window than per-channel timings, a tower can additionally become red if its the sum of per-channel timing histogram entries is greater than per-tower histogram entries by factor 1.66666666667 (significant fraction of events fall outside the tight time-window)."
+      },
+      {
+        "title": "07 TriggerPrimitives",
+        "path": "EcalBarrel/EBSummaryClient/EBTTT emulator error quality summary",
+        "description": "Summary of emulator matching quality. A tower is red if the number of events with Et emulation error is greater than 0.2 of total events. Towers with entries less than 3 are not considered. Also, an entire SuperModule can show red if its (data) Trigger Primitive digi occupancy is less than 5sigma of the overall SuperModule mean, or if more than 80% of its Trigger Towers are showing any number of TT Flag-Readout Mismatch errors. Finally, if the fraction of towers in a SuperModule that are permanently masked or have TTF4 flag set is greater than 0.1, then the entire supermodule shows red."
+      },
+      {
+        "title": "07 TriggerPrimitives",
+        "path": "EcalEndcap/EESummaryClient/EETTT EE - emulator error quality summary",
+        "description": "Summary of emulator matching quality. A tower is red if the number of events with Et emulation error is greater than 0.2 of total events. Towers with entries less than 3 are not considered. Also, an entire SuperModule can show red if its (data) Trigger Primitive digi occupancy is less than 5sigma of the overall SuperModule mean, or if more than 80% of its Trigger Towers are showing any number of TT Flag-Readout Mismatch errors. Finally, if the fraction of towers in a SuperModule that are permanently masked or have TTF4 flag set is greater than 0.1, then the entire supermodule shows red."
+      },
+      {
+        "title": "07 TriggerPrimitives",
+        "path": "EcalEndcap/EESummaryClient/EETTT EE + emulator error quality summary",
+        "description": "Summary of emulator matching quality. A tower is red if the number of events with Et emulation error is greater than 0.2 of total events. Towers with entries less than 3 are not considered. Also, an entire SuperModule can show red if its (data) Trigger Primitive digi occupancy is less than 5sigma of the overall SuperModule mean, or if more than 80% of its Trigger Towers are showing any number of TT Flag-Readout Mismatch errors. Finally, if the fraction of towers in a SuperModule that are permanently masked or have TTF4 flag set is greater than 0.1, then the entire supermodule shows red."
+      },
+      {
+        "title": "08 Hot Cells",
+        "path": "EcalBarrel/EBSummaryClient/EBOT hot cell quality summary",
+        "description": "Summary of the hot cell monitor. A channel is red if it has more than 100.0 times more entries than phi-ring mean in either digi, rec hit (filtered), or TP digi (filtered). Channels with less than 20 entries are not considered. Channel names of the hot cells are available in (Top) / Ecal / Errors / HotCells. Also, an entire SuperModule can show red if its (filtered) rechit occupancy is less than 5sigma of the overall SuperModule mean."
+      },
+      {
+        "title": "08 Hot Cells",
+        "path": "EcalEndcap/EESummaryClient/EEOT EE - hot cell quality summary",
+        "description": "Summary of the hot cell monitor. A channel is red if it has more than 100.0 times more entries than phi-ring mean in either digi, rec hit (filtered), or TP digi (filtered). Channels with less than 20 entries are not considered. Channel names of the hot cells are available in (Top) / Ecal / Errors / HotCells. Also, an entire SuperModule can show red if its (filtered) rechit occupancy is less than 5sigma of the overall SuperModule mean."
+      },
+      {
+        "title": "08 Hot Cells",
+        "path": "EcalEndcap/EESummaryClient/EEOT EE + hot cell quality summary",
+        "description": "Summary of the hot cell monitor. A channel is red if it has more than 100.0 times more entries than phi-ring mean in either digi, rec hit (filtered), or TP digi (filtered). Channels with less than 20 entries are not considered."
+      },
+      {
+        "title": "09 Laser 3 (Photonics)",
+        "path": "EcalBarrel/EBSummaryClient/EBLT laser quality summary L3",
+        "description": "Summary of the laser data quality. A channel is red either if mean / expected < 0.1, or if mean / expected > 2.06, or if RMS / expected > 0.3, or if mean timing is off from expected by 0.5. Expected amplitudes and timings are 1700.0, 1300.0, 1700.0, 1700.0 and 4.2, 4.2, 4.2, 4.2 for lasers 1, 2, 3, and 4 respectively. Channels with less than 3 are not considered."
+      },
+      {
+        "title": "09 Laser 3 (Photonics)",
+        "path": "EcalEndcap/EESummaryClient/EELT EE - laser quality summary L3",
+        "description": "Summary of the laser data quality. A channel is red either if mean / expected < 0.1, or if mean / expected > 2.06, or if RMS / expected > 0.3, or if mean timing is off from expected by 0.5. Expected amplitudes and timings are 1700.0, 1300.0, 1700.0, 1700.0 and 4.2, 4.2, 4.2, 4.2 for lasers 1, 2, 3, and 4 respectively. Channels with less than 3 are not considered."
+      },
+      {
+        "title": "09 Laser 3 (Photonics)",
+        "path": "EcalEndcap/EESummaryClient/EELT EE + laser quality summary L3",
+        "description": "Summary of the laser data quality. A channel is red either if mean / expected < 0.1, or if mean / expected > 2.06, or if RMS / expected > 0.3, or if mean timing is off from expected by 0.5. Expected amplitudes and timings are 1700.0, 1300.0, 1700.0, 1700.0 and 4.2, 4.2, 4.2, 4.2 for lasers 1, 2, 3, and 4 respectively. Channels with less than 3 are not considered."
+      },
+      {
+        "title": "10 Laser 3 PN",
+        "path": "EcalBarrel/EBSummaryClient/EBLT PN laser quality summary L3",
+        "description": "Summary of the laser data quality in the PN diodes. A channel is red if mean / expected < 0.1 or RMS / expected > 1.0. Expected amplitudes are 800.0, 800.0, 800.0, 800.0 for laser 1, 2, 3, and 4 respectively. Channels with less than 3 are not considered."
+      },
+      {
+        "title": "10 Laser 3 PN",
+        "path": "EcalEndcap/EESummaryClient/EELT PN laser quality summary L3",
+        "description": "Summary of the laser data quality in the PN diodes. A channel is red if mean / expected < 0.1 or RMS / expected > 1.0. Expected amplitudes are 800.0, 800.0, 800.0, 800.0 for laser 1, 2, 3, and 4 respectively. Channels with less than 3 are not considered."
+      },
+      {
+        "title": "11 Test Pulse PN",
+        "path": "EcalBarrel/EBSummaryClient/EBTPT PN test pulse quality G16 summary",
+        "description": "Summary of test pulse data quality for PN diodes. A channel is red if mean amplitude is lower than the threshold, or RMS is greater than threshold. The mean and RMS thresholds are 12.5, 200.0 and 20.0, 20.0 for gains 1 and 16 respectively. Channels with entries less than 3 are not considered."
+      },
+      {
+        "title": "11 Test Pulse PN",
+        "path": "EcalEndcap/EESummaryClient/EETPT PN test pulse quality G16 summary",
+        "description": "Summary of test pulse data quality for PN diodes. A channel is red if mean amplitude is lower than the threshold, or RMS is greater than threshold. The mean and RMS thresholds are 12.5, 200.0 and 20.0, 20.0 for gains 1 and 16 respectively. Channels with entries less than 3 are not considered."
+      },
+      {
+        "title": "12 TT Flag-Readout Mismatch",
+        "path": "EcalBarrel/EBSelectiveReadoutTask/EBSRT TT flag mismatch",
+        "description": "For events with medium- and high-interest TT flags, this plot maps the occupancy for towers with a mismatch in the number of readouts between the TPs and the Digis."
+      },
+      {
+        "title": "12 TT Flag-Readout Mismatch",
+        "path": "EcalEndcap/EESelectiveReadoutTask/EESRT TT flag mismatch EE -",
+        "description": "For events with medium- and high-interest TT flags, this plot maps the occupancy for towers with a mismatch in the number of readouts between the TPs and the Digis."
+      },
+      {
+        "title": "12 TT Flag-Readout Mismatch",
+        "path": "EcalEndcap/EESelectiveReadoutTask/EESRT TT flag mismatch EE +",
+        "description": "For events with medium- and high-interest TT flags, this plot maps the occupancy for towers with a mismatch in the number of readouts between the TPs and the Digis."
+      }
+    ]
+  },
+  {
+    "subsystem": "Ecal",
+    "source_file": "shift_ecal_relval_layout.py",
+    "plots": [
+      {
+        "title": "00 RecHit Spectra",
+        "path": "EcalBarrel/EBOccupancyTask/EBOT rec hit spectrum",
+        "description": "Rec hit energy distribution."
+      },
+      {
+        "title": "00 RecHit Spectra",
+        "path": "EcalEndcap/EEOccupancyTask/EEOT rec hit spectrum EE -",
+        "description": "Rec hit energy distribution."
+      },
+      {
+        "title": "00 RecHit Spectra",
+        "path": "EcalEndcap/EEOccupancyTask/EEOT rec hit spectrum EE +",
+        "description": "Rec hit energy distribution."
+      },
+      {
+        "title": "01 Number of RecHits",
+        "path": "EcalBarrel/EBOccupancyTask/EBOT number of filtered rec hits in event",
+        "description": "Occupancy of rec hits with GOOD reconstruction flag and E > 0.5 GeV."
+      },
+      {
+        "title": "01 Number of RecHits",
+        "path": "EcalEndcap/EEOccupancyTask/EEOT number of filtered rec hits in event",
+        "description": "Occupancy of rec hits with GOOD reconstruction flag and E > 0.5 GeV."
+      },
+      {
+        "title": "02 Mean Timing",
+        "path": "EcalBarrel/EBSummaryClient/EBTMT timing mean 1D summary",
+        "description": "Distribution of per-channel timing mean. Channels with entries less than 1 (or 8 in forward region) are not considered."
+      },
+      {
+        "title": "02 Mean Timing",
+        "path": "EcalEndcap/EESummaryClient/EETMT EE - timing mean 1D summary",
+        "description": "Distribution of per-channel timing mean. Channels with entries less than 1 (or 8 in forward region) are not considered."
+      },
+      {
+        "title": "02 Mean Timing",
+        "path": "EcalEndcap/EESummaryClient/EETMT EE + timing mean 1D summary",
+        "description": "Distribution of per-channel timing mean. Channels with entries less than 1 (or 8 in forward region) are not considered."
+      }
+    ]
+  },
+  {
+    "subsystem": "Errors",
+    "source_file": "shift_error_layout.py",
+    "plots": [
+      {
+        "title": "06 - BeamSpot missing from online",
+        "path": "BeamMonitor/BeamSpotProblemMonitor/FitFromScalars/BeamSpotError",
+        "description": "This plots shows if beamspot is running OK or have problems. If there is any filled entries then it will give alarm. This plot is filled when for more than 10 LSs continuously there is problem. The alarm is put off after 2 LSs. This alarm exclude no collision OR tracker OFF conditions."
+      },
+      {
+        "title": "08 - L1T Zero Suppression Error",
+        "path": "L1T/L1TStage2uGMT/zeroSuppression/AllEvts/mismatchRatio",
+        "description": "Summary of the uGMT zero suppression checks for all events. Wrongly zero suppressed raw data can only be checked for the validation events. For normal events only errors where data was not zero suppressed but should have been will be found."
+      },
+      {
+        "title": "09 - L1T Data Transmission Error",
+        "path": "L1T/L1TStage2uGT/uGMToutput_vs_uGTinput/mismatchRatio",
+        "description": "Summary of the uGMT output to uGT input data transmission checks. The uGT must receive exactly the same objects that the uGMT sends. Mismatches are indicated in the ratio plot."
+      },
+      {
+        "title": "10 - L1T uGMT Output Integrity Error",
+        "path": "L1T/L1TStage2uGMT/uGMTMuonCopies/uGMTMuonCopy1/mismatchRatio",
+        "description": "Summary of the comparison of the uGMT output muon collection with the copy #1 of the uGMT output muon collection. The two collections must contain identical data. Mismatches are indicated in the ratio plot."
+      },
+      {
+        "title": "10 - L1T uGMT Output Integrity Error",
+        "path": "L1T/L1TStage2uGMT/uGMTMuonCopies/uGMTMuonCopy2/mismatchRatio",
+        "description": "Summary of the comparison of the uGMT output muon collection with the copy #2 of the uGMT output muon collection. The two collections must contain identical data. Mismatches are indicated in the ratio plot."
+      },
+      {
+        "title": "10 - L1T uGMT Output Integrity Error",
+        "path": "L1T/L1TStage2uGMT/uGMTMuonCopies/uGMTMuonCopy3/mismatchRatio",
+        "description": "Summary of the comparison of the uGMT output muon collection with the copy #3 of the uGMT output muon collection. The two collections must contain identical data. Mismatches are indicated in the ratio plot."
+      },
+      {
+        "title": "10 - L1T uGMT Output Integrity Error",
+        "path": "L1T/L1TStage2uGMT/uGMTMuonCopies/uGMTMuonCopy4/mismatchRatio",
+        "description": "Summary of the comparison of the uGMT output muon collection with the copy #4 of the uGMT output muon collection. The two collections must contain identical data. Mismatches are indicated in the ratio plot."
+      },
+      {
+        "title": "10 - L1T uGMT Output Integrity Error",
+        "path": "L1T/L1TStage2uGMT/uGMTMuonCopies/uGMTMuonCopy5/mismatchRatio",
+        "description": "Summary of the comparison of the uGMT output muon collection with the copy #5 of the uGMT output muon collection. The two collections must contain identical data. Mismatches are indicated in the ratio plot."
+      },
+      {
+        "title": "11 - HCAL uHTR-L1T Layer1 Mismatch",
+        "path": "L1T/L1TStage2CaloLayer1/MismatchDetail/maxEvtMismatchByLumiHCAL",
+        "description": "Trigger primitive mismatches between HCAL uHTR and L1T"
+      },
+      {
+        "title": "12 - HCAL LED Misfires",
+        "path": "Hcal/DigiTask/LED_CUCountvsLSmod60/Subdet/HE",
+        "description": "Number of LED misfire events (HE) vs FED vs LSmod60"
+      },
+      {
+        "title": "12 - HCAL LED Misfires",
+        "path": "Hcal/DigiTask/LED_CUCountvsLSmod60/Subdet/HF",
+        "description": "Number of LED misfire events (HF) vs FED vs LSmod60"
+      },
+      {
+        "title": "13 - HCAL Bad CapID rotation",
+        "path": "Hcal/DigiTask/CapID/CapID_BadvsLSmod10",
+        "description": "Bad CapID values vs FED vs LSmod10"
+      },
+      {
+        "title": "14 - HCAL Bad Quality Events",
+        "path": "Hcal/RawTask/BadQ_FEDvsLSmod10/BadQ_FEDvsLSmod10",
+        "description": "Bad Quality Events values vs FED vs LSmod10"
+      }
+    ]
+  },
+  {
+    "subsystem": "EcalPreshower",
+    "source_file": "shift_es_layout.py",
+    "plots": [
+      {
+        "title": "01-IntegritySummary",
+        "path": "EcalPreshower/ESIntegrityClient/ES Integrity Summary 1 Z 1 P 1",
+        "description": "ES+ Front Integrity Summary 1 - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftPreshower>DQMShiftPreshower</a> <br/> <table width=100%> <tr><td>1 - not used<td>2 - fiber problem<td>3 - OK<td>4 - FED problem<td><tr>5 - KCHIP problem<td>6 - ES counters are not synced with GT counters (see ESRawDataTask) <td> 7 - more than one problem<td>8 - SLink CRC error</table> "
+      },
+      {
+        "title": "01-IntegritySummary",
+        "path": "EcalPreshower/ESIntegrityClient/ES Integrity Summary 1 Z -1 P 1",
+        "description": "ES- Front Integrity Summary 1 - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftPreshower>DQMShiftPreshower</a> <br/> <table width=100%> <tr><td>1 - not used<td>2 - fiber problem<td>3 - OK<td>4 - FED problem<td><tr>5 - KCHIP problem<td>6 - ES counters are not synced with GT counters (see ESRawDataTask) <td> 7 - more than one problem<td>8 - SLink CRC error</table> "
+      },
+      {
+        "title": "01-IntegritySummary",
+        "path": "EcalPreshower/ESIntegrityClient/ES Integrity Summary 1 Z 1 P 2",
+        "description": "ES+ Rear Integrity Summary 1 - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftPreshower>DQMShiftPreshower</a> <br/> <table width=100%> <tr><td>1 - not used<td>2 - fiber problem<td>3 - OK<td>4 - FED problem<td><tr>5 - KCHIP problem<td>6 - ES counters are not synced with GT counters (see ESRawDataTask) <td> 7 - more than one problem<td>8 - SLink CRC error</table> "
+      },
+      {
+        "title": "01-IntegritySummary",
+        "path": "EcalPreshower/ESIntegrityClient/ES Integrity Summary 1 Z -1 P 2",
+        "description": "ES- Rear Integrity Summary 1 - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftPreshower>DQMShiftPreshower</a> <br/> <table width=100%> <tr><td>1 - not used<td>2 - fiber problem<td>3 - OK<td>4 - FED problem<td><tr>5 - KCHIP problem<td>6 - ES counters are not synced with GT counters (see ESRawDataTask) <td> 7 - more than one problem<td>8 - SLink CRC error</table> "
+      },
+      {
+        "title": "02-GoodRechitOccupancySummary",
+        "path": "EcalPreshower/ESOccupancyTask/ES Occupancy with selected hits Z 1 P 1",
+        "description": "ES Occupancy for ES+F. The colors in each segment represent the average number of strips per sensor per event that have hits with a pulse shape consistent with a real signal. A good reference run is 251643 for collision and 253299 for cosmic. The detailed description can be found in <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftPreshower>DQMShiftPreshower</a> "
+      },
+      {
+        "title": "02-GoodRechitOccupancySummary",
+        "path": "EcalPreshower/ESOccupancyTask/ES Occupancy with selected hits Z -1 P 1",
+        "description": "ES Occupancy for ES-F. The colors in each segment represent the average number of strips per sensor per event that have hits with a pulse shape consistent with a real signal. A good reference run is 251643 for collision and 253299 for cosmic. The detailed description can be found in <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftPreshower>DQMShiftPreshower</a> "
+      },
+      {
+        "title": "02-GoodRechitOccupancySummary",
+        "path": "EcalPreshower/ESOccupancyTask/ES Occupancy with selected hits Z 1 P 2",
+        "description": "ES Occupancy for ES+R. The colors in each segment represent the average number of strips per sensor per event that have hits with a pulse shape consistent with a real signal. A good reference run is 251643 for collision and 253299 for cosmic. The detailed description can be found in <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftPreshower>DQMShiftPreshower</a> "
+      },
+      {
+        "title": "02-GoodRechitOccupancySummary",
+        "path": "EcalPreshower/ESOccupancyTask/ES Occupancy with selected hits Z -1 P 2",
+        "description": "ES Occupancy for ES-R. The colors in each segment represent the average number of strips per sensor per event that have hits with a pulse shape consistent with a real signal. A good reference run is 251643 for collision and 253299 for cosmic. The detailed description can be found in <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftPreshower>DQMShiftPreshower</a> "
+      },
+      {
+        "title": "03-GoodRechitEnergySummary",
+        "path": "EcalPreshower/ESOccupancyTask/ES RecHit Energy with selected hits Z 1 P 1",
+        "description": "Energy spectrum with selected hits with a pulse shape consistent with a real signal for ES+F. A good reference run is 251643 for collision and 253299 for cosmic. The detailed description can be found in <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftPreshower>DQMShiftPreshower</a> "
+      },
+      {
+        "title": "03-GoodRechitEnergySummary",
+        "path": "EcalPreshower/ESOccupancyTask/ES RecHit Energy with selected hits Z -1 P 1",
+        "description": "Energy spectrum with selected hits with a pulse shape consistent with a real signal for ES-F. A good reference run is 251643 for collision and 253299 for cosmic. The detailed description can be found in <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftPreshower>DQMShiftPreshower</a> "
+      },
+      {
+        "title": "03-GoodRechitEnergySummary",
+        "path": "EcalPreshower/ESOccupancyTask/ES RecHit Energy with selected hits Z 1 P 2",
+        "description": "Energy spectrum with selected hits with a pulse shape consistent with a real signal for ES+R. A good reference run is 251643 for collision and 253299 for cosmic. The detailed description can be found in <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftPreshower>DQMShiftPreshower</a> "
+      },
+      {
+        "title": "03-GoodRechitEnergySummary",
+        "path": "EcalPreshower/ESOccupancyTask/ES RecHit Energy with selected hits Z -1 P 2",
+        "description": "Energy spectrum with selected hits with a pulse shape consistent with a real signal for ES-R. A good reference run is 251643 for collision and 253299 for cosmic. The detailed description can be found in <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftPreshower>DQMShiftPreshower</a> "
+      },
+      {
+        "title": "04-ESTimingTaskSummary-EcalPreshower",
+        "path": "EcalPreshower/ESTimingTask/ES Timing Z 1 P 1",
+        "description": "ES Timing Z 1 P 1 - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftPreshower>DQMShiftPreshower</a> "
+      },
+      {
+        "title": "04-ESTimingTaskSummary-EcalPreshower",
+        "path": "EcalPreshower/ESTimingTask/ES Timing Z -1 P 1",
+        "description": "ES Timing Z -1 P 1 - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftPreshower>DQMShiftPreshower</a> "
+      },
+      {
+        "title": "04-ESTimingTaskSummary-EcalPreshower",
+        "path": "EcalPreshower/ESTimingTask/ES Timing Z 1 P 2",
+        "description": "ES Timing Z 1 P 2 - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftPreshower>DQMShiftPreshower</a> "
+      },
+      {
+        "title": "04-ESTimingTaskSummary-EcalPreshower",
+        "path": "EcalPreshower/ESTimingTask/ES Timing Z -1 P 2",
+        "description": "ES Timing Z -1 P 2 - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftPreshower>DQMShiftPreshower</a> "
+      },
+      {
+        "title": "05-ESGain-EcalPreshower",
+        "path": "EcalPreshower/ESIntegrityTask/ES Gain used for data taking",
+        "description": "ES Gain configuration in the front-end electronics"
+      },
+      {
+        "title": "06-ES-Fiber-Error-Code",
+        "path": "EcalPreshower/ESIntegrityTask/ES Fiber Error Code",
+        "description": "Error codes for each ES integrity error; the number of entries is the number of events with an error."
+      }
+    ]
+  },
+  {
+    "subsystem": "FED",
+    "source_file": "shift_fed_layout.py",
+    "plots": [
+      {
+        "title": "00 Report Summary Map",
+        "path": "FED/EventInfo/reportSummaryMap",
+        "description": "FED summary for each subdetector"
+      },
+      {
+        "title": "01 FED Integrity Check",
+        "path": "FED/FEDIntegrity_EvF/FedEntries",
+        "description": "Number of entries vs FED ID"
+      },
+      {
+        "title": "01 FED Integrity Check",
+        "path": "FED/FEDIntegrity_EvF/FedFatal",
+        "description": "Number of fatal errors vs FED ID"
+      },
+      {
+        "title": "01 FED Integrity Check",
+        "path": "FED/FEDIntegrity_EvF/FedNonFatal",
+        "description": "Number of non-fatal errors vs FED ID"
+      }
+    ]
+  },
+  {
+    "subsystem": "GEM",
+    "source_file": "shift_gem_layout.py",
+    "plots": [
+      {
+        "title": "Common/00 Summary",
+        "path": "GEM/EventInfo/reportSummaryMap",
+        "description": "For more information (... under construction)"
+      },
+      {
+        "title": "Common/01 GE11-M-L1 recHit xy occupancy",
+        "path": "GEM/RecHits/occ_xy_GE11-M-L1",
+        "description": "recHit xy occupancy in GE11-M-L1"
+      },
+      {
+        "title": "Common/02 GE11-M-L2 recHit xy occupancy",
+        "path": "GEM/RecHits/occ_xy_GE11-M-L2",
+        "description": "recHit xy occupancy in GE11-M-L2"
+      },
+      {
+        "title": "Common/03 GE11-P-L1 recHit xy occupancy",
+        "path": "GEM/RecHits/occ_xy_GE11-P-L1",
+        "description": "recHit xy occupancy in GE11-P-L1"
+      },
+      {
+        "title": "Common/04 GE11-P-L2 recHit xy occupancy",
+        "path": "GEM/RecHits/occ_xy_GE11-P-L2",
+        "description": "recHit xy occupancy in GE11-P-L2"
+      },
+      {
+        "title": "Common/05 GE21-M-L1 recHit xy occupancy",
+        "path": "GEM/RecHits/occ_xy_GE21-M-L1",
+        "description": "recHit xy occupancy in GE21-M-L1"
+      },
+      {
+        "title": "Common/06 GE21-P-L2 recHit xy occupancy",
+        "path": "GEM/RecHits/occ_xy_GE21-P-L2",
+        "description": "recHit xy occupancy in GE21-P-L2"
+      },
+      {
+        "title": "Common/07 GE11-M-L1 GEM-CSC segment efficiency",
+        "path": "GEM/Efficiency/GEMCSCSegment/eff_chamber_GE11-M-L1",
+        "description": "GEM-CSC segment efficiency in GE11-M-L1"
+      },
+      {
+        "title": "Common/08 GE11-M-L2 GEM-CSC segment efficiency",
+        "path": "GEM/Efficiency/GEMCSCSegment/eff_chamber_GE11-M-L2",
+        "description": "GEM-CSC segment efficiency in GE11-M-L2"
+      },
+      {
+        "title": "Common/09 GE11-P-L1 GEM-CSC segment efficiency",
+        "path": "GEM/Efficiency/GEMCSCSegment/eff_chamber_GE11-P-L1",
+        "description": "GEM-CSC segment efficiency in GE11-P-L1"
+      },
+      {
+        "title": "Common/10 GE11-P-L2 GEM-CSC segment efficiency",
+        "path": "GEM/Efficiency/GEMCSCSegment/eff_chamber_GE11-P-L2",
+        "description": "GEM-CSC segment efficiency in GE11-P-L2"
+      }
+    ]
+  },
+  {
+    "subsystem": "HcalCalib",
+    "source_file": "shift_hcalcalib_layout.py",
+    "plots": [
+      {
+        "title": "00 Run Summary",
+        "path": "HcalCalib/PedestalTask/SummaryvsLS/SummaryvsLS",
+        "description": "Calibration Summary. Anything that is not either WHITE or GREEN or Gray is BAD.<br> Color Scheme:<br><font color='green'>GOOD</font> for GOOD<br><font color='yellow'>PROBLEMATIC</font> for Problematic<br><font color='red'>BAD</font> for BAD<br><font color='black'>RESERVED</font> Not used at the moment <br><font color='gray'>NCDAQ with Gray Font</font> FED is excluded from cDAQ<br>WHITE color stands for INAPPLICABLE flag<br>FED(Y) vs LS(X). All the Monitoring Tasks are summarized. For details...  <a href='https://twiki.cern.ch/twiki/bin/view/CMS/HcalDQMRun2TaskDescription#Pedestal_Task_Description'>Details...</a>"
+      },
+      {
+        "title": "00 Run Summary",
+        "path": "HcalCalib/RawTask/SummaryvsLS/SummaryvsLS",
+        "description": "RAW Summary Summary. Anything that is not either WHITE or GREEN or Gray is BAD.<br> Color Scheme:<br><font color='green'>GOOD</font> for GOOD<br><font color='yellow'>PROBLEMATIC</font> for Problematic<br><font color='red'>BAD</font> for BAD<br><font color='black'>RESERVED</font> Not used at the moment <br><font color='gray'>NCDAQ with Gray Font</font> FED is excluded from cDAQ<br>WHITE color stands for INAPPLICABLE flag<br>FED(Y) vs LS(X). All the Monitoring Tasks are summarized. For details...  <a href='https://twiki.cern.ch/twiki/bin/view/CMS/HcalDQMRun2TaskDescription#Raw_Task_Description'>Details...</a>"
+      }
+    ]
+  },
+  {
+    "subsystem": "Hcal",
+    "source_file": "shift_hcal_layout.py",
+    "plots": [
+      {
+        "title": "00 Run Summary",
+        "path": "Hcal/TPTask/SummaryvsLS/SummaryvsLS",
+        "description": "Trigger Primitives Summary. Summary. Anything that is not either WHITE or GREEN or Gray is BAD.<br> Color Scheme:<br><font color='green'>GOOD</font> for GOOD<br><font color='yellow'>PROBLEMATIC</font> for Problematic<br><font color='red'>BAD</font> for BAD<br><font color='black'>RESERVED</font> Not used at the moment <br><font color='gray'>NCDAQ with Gray Font</font> FED is excluded from cDAQ<br>WHITE color stands for INAPPLICABLE flag<br>FED(Y) vs LS(X). All the Monitoring Tasks are summarized. For details...  <a href='https://twiki.cern.ch/twiki/bin/view/CMS/HcalDQMRun2TaskDescription#TP_Task_Description'>Details...</a>"
+      },
+      {
+        "title": "00 Run Summary",
+        "path": "Hcal/DigiTask/SummaryvsLS/SummaryvsLS",
+        "description": "DIGI Summary Summary. Anything that is not either WHITE or GREEN or Gray is BAD.<br> Color Scheme:<br><font color='green'>GOOD</font> for GOOD<br><font color='yellow'>PROBLEMATIC</font> for Problematic<br><font color='red'>BAD</font> for BAD<br><font color='black'>RESERVED</font> Not used at the moment <br><font color='gray'>NCDAQ with Gray Font</font> FED is excluded from cDAQ<br>WHITE color stands for INAPPLICABLE flag<br>FED(Y) vs LS(X). All the Monitoring Tasks are summarized. For details...  <a href='https://twiki.cern.ch/twiki/bin/view/CMS/HcalDQMRun2TaskDescription#Digi_Task_Description'>Details...</a>"
+      },
+      {
+        "title": "00 Run Summary",
+        "path": "Hcal/RawTask/SummaryvsLS/SummaryvsLS",
+        "description": "RAW Summary Summary. Anything that is not either WHITE or GREEN or Gray is BAD.<br> Color Scheme:<br><font color='green'>GOOD</font> for GOOD<br><font color='yellow'>PROBLEMATIC</font> for Problematic<br><font color='red'>BAD</font> for BAD<br><font color='black'>RESERVED</font> Not used at the moment <br><font color='gray'>NCDAQ with Gray Font</font> FED is excluded from cDAQ<br>WHITE color stands for INAPPLICABLE flag<br>FED(Y) vs LS(X). All the Monitoring Tasks are summarized. For details...  <a href='https://twiki.cern.ch/twiki/bin/view/CMS/HcalDQMRun2TaskDescription#Raw_Task_Description'>Details...</a>"
+      },
+      {
+        "title": "00 Run Summary",
+        "path": "HcalReco/RecHitTask/SummaryvsLS/SummaryvsLS",
+        "description": "RECO Summary. Summary. Anything that is not either WHITE or GREEN or Gray is BAD.<br> Color Scheme:<br><font color='green'>GOOD</font> for GOOD<br><font color='yellow'>PROBLEMATIC</font> for Problematic<br><font color='red'>BAD</font> for BAD<br><font color='black'>RESERVED</font> Not used at the moment <br><font color='gray'>NCDAQ with Gray Font</font> FED is excluded from cDAQ<br>WHITE color stands for INAPPLICABLE flag<br>FED(Y) vs LS(X). All the Monitoring Tasks are summarized. For details...  <a href='https://twiki.cern.ch/twiki/bin/view/CMS/HcalDQMRun2TaskDescription#RecHit_Task_Description'>Details...</a>"
+      },
+      {
+        "title": "01 Run Summary",
+        "path": "Hcal/EventInfo/runSummary",
+        "description": "Run Summary. Color scheme is identical to the 00 Run Summary"
+      }
+    ]
+  },
+  {
+    "subsystem": "Unknown",
+    "source_file": "shift_hlt_layout.py",
+    "plots": []
+  },
+  {
+    "subsystem": "HLT",
+    "source_file": "shift_hlt_relval_layout.py",
+    "plots": [
+      {
+        "title": "RelVal/FourVector/Muon/Eff HLT to MC",
+        "path": "HLT/FourVector_Val/client/HLT_Mu9/custom-eff/HLT_Mu9_wrt__mcEt_Eff_OnToMc",
+        "description": "Efficiency of HLT to MC for path HLT_Mu9"
+      },
+      {
+        "title": "RelVal/FourVector/Muon/Eff HLT to MC eta-phi",
+        "path": "HLT/FourVector_Val/client/HLT_Mu9/custom-eff/HLT_Mu9_wrt__mcEtamcPhi_Eff_OnToMc",
+        "description": "Efficiency of HLT to MC for path HLT_Mu9"
+      },
+      {
+        "title": "RelVal/FourVector/Muon/Eff HLT to L1",
+        "path": "HLT/FourVector_Val/client/HLT_Mu9/custom-eff/HLT_Mu9_wrt__l1Et_Eff_OnToL1",
+        "description": "Efficiency of HLT to L1 for path HLT_Mu9"
+      },
+      {
+        "title": "RelVal/FourVector/Muon/Eff HLT to RECO",
+        "path": "HLT/FourVector_Val/client/HLT_Mu9/custom-eff/HLT_Mu9_wrt__offEt_Eff_OnToOff",
+        "description": "Efficiency of HLT to RECO for path HLT_Mu9"
+      },
+      {
+        "title": "RelVal/FourVector/Muon/Eff L1 to MC",
+        "path": "HLT/FourVector_Val/client/HLT_Mu9/custom-eff/HLT_Mu9_wrt__mcEt_Eff_L1ToMc",
+        "description": "Efficiency of L1 to MC for path HLT_Mu9"
+      },
+      {
+        "title": "RelVal/FourVector/Muon/Eff L1 to RECO",
+        "path": "HLT/FourVector_Val/client/HLT_Mu9/custom-eff/HLT_Mu9_wrt__offEt_Eff_L1ToOff",
+        "description": "Efficiency of L1 to RECO for path HLT_Mu9"
+      },
+      {
+        "title": "RelVal/FourVector/Electron/Eff HLT to MC",
+        "path": "HLT/FourVector_Val/client/HLT_Ele10_LW_L1R/custom-eff/HLT_Ele10_LW_L1R_wrt__mcEt_Eff_OnToMc",
+        "description": "Efficiency of HLT to MC for path HLT_Ele10_LW_L1R"
+      },
+      {
+        "title": "RelVal/FourVector/Electron/Eff HLT to MC eta-phi",
+        "path": "HLT/FourVector_Val/client/HLT_Ele10_LW_L1R/custom-eff/HLT_Ele10_LW_L1R_wrt__mcEtamcPhi_Eff_OnToMc",
+        "description": "Efficiency of HLT to MC for path HLT_Ele10_LW_L1R"
+      },
+      {
+        "title": "RelVal/FourVector/Electron/Eff HLT to L1",
+        "path": "HLT/FourVector_Val/client/HLT_Ele10_LW_L1R/custom-eff/HLT_Ele10_LW_L1R_wrt__l1Et_Eff_OnToL1",
+        "description": "Efficiency of HLT to L1 for path HLT_Ele10_LW_L1R"
+      },
+      {
+        "title": "RelVal/FourVector/Electron/Eff HLT to RECO",
+        "path": "HLT/FourVector_Val/client/HLT_Ele10_LW_L1R/custom-eff/HLT_Ele10_LW_L1R_wrt__offEt_Eff_OnToOff",
+        "description": "Efficiency of HLT to RECO for path HLT_Ele10_LW_L1R"
+      },
+      {
+        "title": "RelVal/FourVector/Electron/Eff L1 to MC",
+        "path": "HLT/FourVector_Val/client/HLT_Ele10_LW_L1R/custom-eff/HLT_Ele10_LW_L1R_wrt__mcEt_Eff_L1ToMc",
+        "description": "Efficiency of L1 to MC for path HLT_Ele10_LW_L1R"
+      },
+      {
+        "title": "RelVal/FourVector/Electron/Eff L1 to RECO",
+        "path": "HLT/FourVector_Val/client/HLT_Ele10_LW_L1R/custom-eff/HLT_Ele10_LW_L1R_wrt__offEt_Eff_L1ToOff",
+        "description": "Efficiency of L1 to RECO for path HLT_Ele10_LW_L1R"
+      },
+      {
+        "title": "RelVal/FourVector/Jet/Eff HLT to MC",
+        "path": "HLT/FourVector_Val/client/HLT_Jet30U/custom-eff/HLT_Jet30U_wrt__mcEt_Eff_OnToMc",
+        "description": "Efficiency of HLT to MC for path HLT_Jet30U"
+      },
+      {
+        "title": "RelVal/FourVector/Jet/Eff HLT to MC eta-phi",
+        "path": "HLT/FourVector_Val/client/HLT_Jet30U/custom-eff/HLT_Jet30U_wrt__mcEtamcPhi_Eff_OnToMc",
+        "description": "Efficiency of HLT to MC for path HLT_Jet30U"
+      },
+      {
+        "title": "RelVal/FourVector/Jet/Eff HLT to L1",
+        "path": "HLT/FourVector_Val/client/HLT_Jet30U/custom-eff/HLT_Jet30U_wrt__l1Et_Eff_OnToL1",
+        "description": "Efficiency of HLT to L1 for path HLT_Jet30U"
+      },
+      {
+        "title": "RelVal/FourVector/Jet/Eff HLT to RECO",
+        "path": "HLT/FourVector_Val/client/HLT_Jet30U/custom-eff/HLT_Jet30U_wrt__offEt_Eff_OnToOff",
+        "description": "Efficiency of HLT to RECO for path HLT_Jet30U"
+      },
+      {
+        "title": "RelVal/FourVector/Jet/Eff L1 to MC",
+        "path": "HLT/FourVector_Val/client/HLT_Jet30U/custom-eff/HLT_Jet30U_wrt__mcEt_Eff_L1ToMc",
+        "description": "Efficiency of L1 to MC for path HLT_Jet30U"
+      },
+      {
+        "title": "RelVal/FourVector/Jet/Eff L1 to RECO",
+        "path": "HLT/FourVector_Val/client/HLT_Jet30U/custom-eff/HLT_Jet30U_wrt__offEt_Eff_L1ToOff",
+        "description": "Efficiency of L1 to RECO for path HLT_Jet30U"
+      },
+      {
+        "title": "RelVal/FourVector/Photon/Eff HLT to MC",
+        "path": "HLT/FourVector_Val/client/HLT_Photon15_L1R/custom-eff/HLT_Photon15_L1R_wrt__mcEt_Eff_OnToMc",
+        "description": "Efficiency of HLT to MC for path HLT_Photon15_L1R"
+      },
+      {
+        "title": "RelVal/FourVector/Photon/Eff HLT to MC eta-phi",
+        "path": "HLT/FourVector_Val/client/HLT_Photon15_L1R/custom-eff/HLT_Photon15_L1R_wrt__mcEtamcPhi_Eff_OnToMc",
+        "description": "Efficiency of HLT to MC for path HLT_Photon15_L1R"
+      },
+      {
+        "title": "RelVal/FourVector/Photon/Eff HLT to L1",
+        "path": "HLT/FourVector_Val/client/HLT_Photon15_L1R/custom-eff/HLT_Photon15_L1R_wrt__l1Et_Eff_OnToL1",
+        "description": "Efficiency of HLT to L1 for path HLT_Photon15_L1R"
+      },
+      {
+        "title": "RelVal/FourVector/Photon/Eff HLT to RECO",
+        "path": "HLT/FourVector_Val/client/HLT_Photon15_L1R/custom-eff/HLT_Photon15_L1R_wrt__offEt_Eff_OnToOff",
+        "description": "Efficiency of HLT to RECO for path HLT_Photon15_L1R"
+      },
+      {
+        "title": "RelVal/FourVector/Photon/Eff L1 to MC",
+        "path": "HLT/FourVector_Val/client/HLT_Photon15_L1R/custom-eff/HLT_Photon15_L1R_wrt__mcEt_Eff_L1ToMc",
+        "description": "Efficiency of L1 to MC for path HLT_Photon15_L1R"
+      },
+      {
+        "title": "RelVal/FourVector/Photon/Eff L1 to RECO",
+        "path": "HLT/FourVector_Val/client/HLT_Photon15_L1R/custom-eff/HLT_Photon15_L1R_wrt__offEt_Eff_L1ToOff",
+        "description": "Efficiency of L1 to RECO for path HLT_Photon15_L1R"
+      },
+      {
+        "title": "Egamma/Zee Preselection/doubleEle5SWL1R",
+        "path": "HLT/HLTEgammaValidation/HLT_DoubleEle5_SW_L1RDQMZee/efficiency_by_step_MC_matched",
+        "description": "per-event efficiency (MC matched) for doubleEle5SWL1R"
+      },
+      {
+        "title": "Egamma/Zee Preselection/Ele10LWL1R",
+        "path": "HLT/HLTEgammaValidation/HLT_Ele10_LW_L1RDQMZee/efficiency_by_step_MC_matched",
+        "description": "per-event efficiency (MC matched) for Ele10LWL1R"
+      },
+      {
+        "title": "Egamma/Zee Preselection/Ele10LWEleIdL1R",
+        "path": "HLT/HLTEgammaValidation/HLT_Ele10_LW_EleId_L1RDQMZee/efficiency_by_step_MC_matched",
+        "description": "per-event efficiency (MC matched) for Ele10LWEleIdL1R"
+      },
+      {
+        "title": "Egamma/Wenu Preselection/Ele10LWL1R",
+        "path": "HLT/HLTEgammaValidation/HLT_Ele10_LW_L1RDQMWenu/efficiency_by_step_MC_matched",
+        "description": "per-event efficiency (MC matched) for Ele10LWL1R"
+      },
+      {
+        "title": "Egamma/Wenu Preselection/Ele10LWEleIdL1R",
+        "path": "HLT/HLTEgammaValidation/HLT_Ele10_LW_EleId_L1RDQMWenu/efficiency_by_step_MC_matched",
+        "description": "per-event efficiency (MC matched) for Ele10LWEleIdL1R"
+      },
+      {
+        "title": "Muon/Efficiency of L1",
+        "path": "HLT/Muon/Distributions/HLT_IsoMu3/genEffEta_L1",
+        "description": "Efficiency to find an L1 muon associated to a generated muon vs. eta (HLT_IsoMu3 path) (<a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/TriggerValidationMuon\">documentation</a>)"
+      },
+      {
+        "title": "Muon/Efficiency of L2",
+        "path": "HLT/Muon/Distributions/HLT_IsoMu3/genEffEta_L2",
+        "description": "Efficiency to find a gen-matched L2 muon associated to a gen-matched L1 muon vs. eta (HLT_IsoMu3 path) (<a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/TriggerValidationMuon\">documentation</a>)"
+      },
+      {
+        "title": "Muon/Efficiency of L2 After Isolation Step",
+        "path": "HLT/Muon/Distributions/HLT_IsoMu3/genEffEta_L2Iso",
+        "description": "Efficiency to find an isolated gen-matched L2 muon associated to a gen-matched L1 muon vs. eta (HLT_IsoMu3 path) (<a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/TriggerValidationMuon\">documentation</a>)"
+      },
+      {
+        "title": "Muon/Efficiency of L3",
+        "path": "HLT/Muon/Distributions/HLT_IsoMu3/genEffEta_L3",
+        "description": "Efficiency to find a gen-matched L3 muon associated to a gen-matched L1 muon vs. eta (HLT_IsoMu3 path) (<a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/TriggerValidationMuon\">documentation</a>)"
+      },
+      {
+        "title": "Muon/Efficiency of L3 After Isolation Step",
+        "path": "HLT/Muon/Distributions/HLT_IsoMu3/genEffEta_L3Iso",
+        "description": "Efficiency to find an isolated gen-matched L3 muon associated to a gen-matched L1 muon vs. eta (HLT_IsoMu3 path) (<a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/TriggerValidationMuon\">documentation</a>)"
+      },
+      {
+        "title": "Tau/Double Tau Path Performance",
+        "path": "HLT/TauRelVal/MC_8E29/DoubleTau/EfficiencyRefInput",
+        "description": "Efficiency of the Double Tau Path with ref to MC for 8E29"
+      },
+      {
+        "title": "Tau/Double Tau Path Performance",
+        "path": "HLT/TauRelVal/MC_8E29/DoubleTau/EfficiencyRefPrevious",
+        "description": "Efficiency of the Double Tau Path with ref to previous step( 8E29)"
+      },
+      {
+        "title": "Tau/Single Tau Path Performance",
+        "path": "HLT/TauRelVal/MC_8E29/SingleTau/EfficiencyRefInput",
+        "description": "Efficiency of the Single Tau Path with ref to MC for 8E29"
+      },
+      {
+        "title": "Tau/Single Tau Path Performance",
+        "path": "HLT/TauRelVal/MC_8E29/SingleTau/EfficiencyRefPrevious",
+        "description": "Efficiency of the Single Tau Path with ref to previous step( 8E29)"
+      },
+      {
+        "title": "Tau/L1 Performance",
+        "path": "HLT/TauRelVal/MC_8E29/L1/L1TauEtEff",
+        "description": "L1 Tau Efficiency vs pt with  ref to MC for 8E29"
+      },
+      {
+        "title": "Tau/L1 Performance",
+        "path": "HLT/TauRelVal/MC_8E29/L1/L1TauEtaEff",
+        "description": "L1 Tau Efficiency vs pt with  ref to MC for 8E29"
+      },
+      {
+        "title": "Tau/L2 Performance",
+        "path": "HLT/TauRelVal/MC_8E29/L2/L2TauEtEff",
+        "description": "L2 Tau Efficiency vs pt with  ref to MC for 8E29"
+      },
+      {
+        "title": "Tau/L2 Performance",
+        "path": "HLT/TauRelVal/MC_8E29/L2/L2TauEtaEff",
+        "description": "L2 Tau Efficiency vs pt with  ref to MC for 8E29"
+      },
+      {
+        "title": "Tau/L1 Resolution",
+        "path": "HLT/TauRelVal/MC_8E29/L1/L1TauEtResol",
+        "description": "L1 Tau ET resolution with ref to MC  for 8E29"
+      },
+      {
+        "title": "Tau/L2 Resolution",
+        "path": "HLT/TauRelVal/MC_8E29/L2/L2TauEtResol",
+        "description": "L2 Tau ET resolution with ref to MC  for 8E29"
+      },
+      {
+        "title": "JetMET/HLTMET35 eff vs recMet Data",
+        "path": "HLT/HLTJETMET/SingleMET35/Reco Missing ET Turn-On Data",
+        "description": "Trigger efficiency for HLTMET35 versus recMET wrt lower threshold trigger"
+      },
+      {
+        "title": "JetMET/HLTMET45 eff vs recMet Data",
+        "path": "HLT/HLTJETMET/SingleMET45/Reco Missing ET Turn-On Data",
+        "description": "Trigger efficiency for HLTMET45 versus recMET wrt lower threshold trigger"
+      },
+      {
+        "title": "JetMET/HLTMET60 eff vs recMet Data",
+        "path": "HLT/HLTJETMET/SingleMET60/Reco Missing ET Turn-On Data",
+        "description": "Trigger efficiency for HLTMET60 versus recMET wrt lower threshold trigger"
+      },
+      {
+        "title": "JetMET/HLTMET100 eff vs recMet Data",
+        "path": "HLT/HLTJETMET/SingleMET100/Reco Missing ET Turn-On Data",
+        "description": "Trigger efficiency for HLTMET100 versus recMET wrt lower threshold trigger"
+      },
+      {
+        "title": "JetMET/HLTJet15U eff vs recJet Pt Data",
+        "path": "HLT/HLTJETMET/SingleJet15U/Reco Jet Pt Turn-On Data",
+        "description": "Trigger efficiency for HLTJet15U versus recJet Pt wrt lower threshold trigger"
+      },
+      {
+        "title": "JetMET/HLTJet30U eff vs recJet Pt Data",
+        "path": "HLT/HLTJETMET/SingleJet30U/Reco Jet Pt Turn-On Data",
+        "description": "Trigger efficiency for HLTJet30U versus recJet Pt wrt lower threshold trigger"
+      },
+      {
+        "title": "JetMET/HLTJet50U eff vs recJet Pt Data",
+        "path": "HLT/HLTJETMET/SingleJet50U/Reco Jet Pt Turn-On Data",
+        "description": "Trigger efficiency for HLTJet50U versus recJet Pt wrt lower threshold trigger"
+      },
+      {
+        "title": "JetMET/HLTJet70U eff vs recJet Pt Data",
+        "path": "HLT/HLTJETMET/SingleJet70U/Reco Jet Pt Turn-On Data",
+        "description": "Trigger efficiency for HLTJet70U versus recJet Pt wrt lower threshold trigger"
+      },
+      {
+        "title": "JetMET/HLTJet100U eff vs recJet Pt Data",
+        "path": "HLT/HLTJETMET/SingleJet100U/Reco Jet Pt Turn-On Data",
+        "description": "Trigger efficiency for HLTJet100U versus recJet Pt wrt lower threshold trigger"
+      },
+      {
+        "title": "JetMET/HLTJet15U eff vs recJet Eta Data",
+        "path": "HLT/HLTJETMET/SingleJet15U/Reco Jet Eta Turn-On Data",
+        "description": "Trigger efficiency for HLTJet15U versus recJet Eta wrt lower threshold trigger"
+      },
+      {
+        "title": "JetMET/HLTJet30U eff vs recJet Eta Data",
+        "path": "HLT/HLTJETMET/SingleJet30U/Reco Jet Eta Turn-On Data",
+        "description": "Trigger efficiency for HLTJet30U versus recJet Eta wrt lower threshold trigger"
+      },
+      {
+        "title": "JetMET/HLTJet50U eff vs recJet Eta Data",
+        "path": "HLT/HLTJETMET/SingleJet50U/Reco Jet Eta Turn-On Data",
+        "description": "Trigger efficiency for HLTJet50U versus recJet Eta wrt lower threshold trigger"
+      },
+      {
+        "title": "JetMET/HLTJet70U eff vs recJet Eta Data",
+        "path": "HLT/HLTJETMET/SingleJet70U/Reco Jet Eta Turn-On Data",
+        "description": "Trigger efficiency for HLTJet70U versus recJet Eta wrt lower threshold trigger"
+      },
+      {
+        "title": "JetMET/HLTJet100U eff vs recJet Eta Data",
+        "path": "HLT/HLTJETMET/SingleJet100U/Reco Jet Eta Turn-On Data",
+        "description": "Trigger efficiency for HLTJet100U versus recJet Eta wrt lower threshold trigger"
+      },
+      {
+        "title": "JetMET/HLTJet15U eff vs recJet Phi Data",
+        "path": "HLT/HLTJETMET/SingleJet15U/Reco Jet Phi Turn-On Data",
+        "description": "Trigger efficiency for HLTJet15U versus recJet Phi wrt lower threshold trigger"
+      },
+      {
+        "title": "JetMET/HLTJet30U eff vs recJet Phi Data",
+        "path": "HLT/HLTJETMET/SingleJet30U/Reco Jet Phi Turn-On Data",
+        "description": "Trigger efficiency for HLTJet30U versus recJet Phi wrt lower threshold trigger"
+      },
+      {
+        "title": "JetMET/HLTJet50U eff vs recJet Phi Data",
+        "path": "HLT/HLTJETMET/SingleJet50U/Reco Jet Phi Turn-On Data",
+        "description": "Trigger efficiency for HLTJet50U versus recJet Phi wrt lower threshold trigger"
+      },
+      {
+        "title": "JetMET/HLTJet70U eff vs recJet Phi Data",
+        "path": "HLT/HLTJETMET/SingleJet70U/Reco Jet Phi Turn-On Data",
+        "description": "Trigger efficiency for HLTJet70U versus recJet Phi wrt lower threshold trigger"
+      },
+      {
+        "title": "JetMET/HLTJet100U eff vs recJet Phi Data",
+        "path": "HLT/HLTJETMET/SingleJet100U/Reco Jet Phi Turn-On Data",
+        "description": "Trigger efficiency for HLTJet100U versus recJet Phi wrt lower threshold trigger"
+      },
+      {
+        "title": "JetMET/HLTHT300MHT100 eff vs recHT Data",
+        "path": "HLT/HLTJETMET/HT300MHT100/Reco HT Turn-On Data",
+        "description": "Trigger efficiency for HLTHT300MHT100 versus recHT wrt lower threshold trigger"
+      },
+      {
+        "title": "AlCa/Pi0 inv mass",
+        "path": "HLT/AlCaEcalPi0/Pi0InvmassEB",
+        "description": "Pi0 Invariant mass EB . For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/SWGuideSpecialHLTOfflinePerformance\">here</a>."
+      },
+      {
+        "title": "AlCa/event energy eb",
+        "path": "HLT/EcalPhiSym/eventEnergyEB",
+        "description": "Event energy EB . For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/SWGuideSpecialHLTOfflinePerformance\">here</a>."
+      },
+      {
+        "title": "HeavyFlavor/Quakonium efficiency",
+        "path": "HLT/HeavyFlavor/QuarkoniumEfficiencies/genQuakonium_genPt",
+        "description": ". For more information please click <a href=\"\">here</a>."
+      },
+      {
+        "title": "Top/HLT_Mu9 eff vs Eta",
+        "path": "HLT/Top/Semileptonic_muon/EffVsEta_HLT_Mu9",
+        "description": "Trigger efficiency for HLT_Mu9 versus muon eta . For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/TriggerValidationTop\">here</a>."
+      },
+      {
+        "title": "Top/HLT_Mu9 eff vs Pt",
+        "path": "HLT/Top/Semileptonic_muon/EffVsPt_HLT_Mu9",
+        "description": "Trigger efficiency for HLT_Mu9 versus muon pt. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/TriggerValidationTop\">here</a>."
+      },
+      {
+        "title": "Top/HLT_Ele15SWLooseTrkIso eff vs Eta",
+        "path": "HLT/Top/Semileptonic_electron/EffVsEta_HLT_Ele15_SW_LooseTrackIso_L1R",
+        "description": "Trigger efficiency for HLT_Ele15_SW_LooseTrackIso_L1R versus electron eta. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/TriggerValidationTop\">here</a>."
+      },
+      {
+        "title": "Top/HLT_Ele15SWLooseTrkIso eff vs Pt",
+        "path": "HLT/Top/Semileptonic_electron/EffVsPt_HLT_Ele15_SW_LooseTrackIso_L1R",
+        "description": "Trigger efficiency for HLT_Ele15_SW_LooseTrackIso_L1R versus electron pt. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/TriggerValidationTop\">here</a>."
+      },
+      {
+        "title": "SusyExo/00 NoSelection/00 L1/00 L1_EG",
+        "path": "HLT/SusyExo/TriggerBits/L1_EG",
+        "description": "Efficiency for L1 e-gamma bits. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/SWGuideSUSYBSMHLTOfflinePerformance\">here</a>."
+      },
+      {
+        "title": "SusyExo/00 NoSelection/00 L1/01 L1_Mu",
+        "path": "HLT/SusyExo/TriggerBits/L1_Mu",
+        "description": "Efficiency for L1 muon bits. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/SWGuideSUSYBSMHLTOfflinePerformance\">here</a>."
+      },
+      {
+        "title": "SusyExo/00 NoSelection/00 L1/02 L1_Jet",
+        "path": "HLT/SusyExo/TriggerBits/L1_Jet",
+        "description": "Efficiency for L1 jet bits. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/SWGuideSUSYBSMHLTOfflinePerformance\">here</a>."
+      },
+      {
+        "title": "SusyExo/00 NoSelection/00 L1/03 L1_ETM_ETT_HTT",
+        "path": "HLT/SusyExo/TriggerBits/L1_ETM_ETT_HTT",
+        "description": "Efficiency for L1 ETM, ETT  and HTT bits. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/SWGuideSUSYBSMHLTOfflinePerformance\">here</a>."
+      },
+      {
+        "title": "SusyExo/00 NoSelection/00 L1/04 L1_TauJet",
+        "path": "HLT/SusyExo/TriggerBits/L1_TauJet",
+        "description": "Efficiency for L1 tau jet bits. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/SWGuideSUSYBSMHLTOfflinePerformance\">here</a>."
+      },
+      {
+        "title": "SusyExo/00 NoSelection/00 L1/05 L1_XTrigger",
+        "path": "HLT/SusyExo/TriggerBits/L1_XTrigger",
+        "description": "Efficiency for L1 cross trigger bits. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/SWGuideSUSYBSMHLTOfflinePerformance\">here</a>."
+      },
+      {
+        "title": "SusyExo/00 NoSelection/00 L1/06 L1_Others",
+        "path": "HLT/SusyExo/TriggerBits/L1_Overflow",
+        "description": "Efficiency for other L1 bits. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/SWGuideSUSYBSMHLTOfflinePerformance\">here</a>."
+      },
+      {
+        "title": "SusyExo/00 NoSelection/01 HLT/00 Hlt_Ele",
+        "path": "HLT/SusyExo/TriggerBits/Hlt_Ele",
+        "description": "Efficiency for HLT electron paths. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/SWGuideSUSYBSMHLTOfflinePerformance\">here</a>."
+      },
+      {
+        "title": "SusyExo/00 NoSelection/01 HLT/01 Hlt_Photon",
+        "path": "HLT/SusyExo/TriggerBits/Hlt_Photon",
+        "description": "Efficiency for HLT photon paths. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/SWGuideSUSYBSMHLTOfflinePerformance\">here</a>."
+      },
+      {
+        "title": "SusyExo/00 NoSelection/01 HLT/02 Hlt_Mu",
+        "path": "HLT/SusyExo/TriggerBits/Hlt_Mu",
+        "description": "Efficiency for HLT muon paths. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/SWGuideSUSYBSMHLTOfflinePerformance\">here</a>."
+      },
+      {
+        "title": "SusyExo/00 NoSelection/01 HLT/03 Hlt_Jet",
+        "path": "HLT/SusyExo/TriggerBits/Hlt_Jet",
+        "description": "Efficiency for HLT jet paths. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/SWGuideSUSYBSMHLTOfflinePerformance\">here</a>."
+      },
+      {
+        "title": "SusyExo/00 NoSelection/01 HLT/04 Hlt_MET_HT",
+        "path": "HLT/SusyExo/TriggerBits/Hlt_MET_HT",
+        "description": "Efficiency for HLT MET and HT paths. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/SWGuideSUSYBSMHLTOfflinePerformance\">here</a>."
+      },
+      {
+        "title": "SusyExo/00 NoSelection/01 HLT/05 Hlt_Tau_BTag",
+        "path": "HLT/SusyExo/TriggerBits/Hlt_Tau_BTag",
+        "description": "Efficiency for HLT tau and b-tag paths. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/SWGuideSUSYBSMHLTOfflinePerformance\">here</a>."
+      },
+      {
+        "title": "SusyExo/00 NoSelection/01 HLT/06 Hlt_XTrigger",
+        "path": "HLT/SusyExo/TriggerBits/Hlt_XTrigger",
+        "description": "Efficiency for HLT cross trigger paths. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/SWGuideSUSYBSMHLTOfflinePerformance\">here</a>."
+      },
+      {
+        "title": "SusyExo/00 NoSelection/01 HLT/07 Hlt_Others",
+        "path": "HLT/SusyExo/TriggerBits/Hlt_Overflow",
+        "description": "Efficiency for other HLT paths. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/SWGuideSUSYBSMHLTOfflinePerformance\">here</a>."
+      },
+      {
+        "title": "Higgs/HLTMu9 eff vs eta ",
+        "path": "HLT/Higgs/HWW/EffVsEta_HLT_Mu9_EM",
+        "description": "Trigger efficiency for HLT_Mu9  vs muon eta .For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/TriggerValidationHiggs\">here</a>."
+      },
+      {
+        "title": "Higgs/HLTMu9 eff vs pt ",
+        "path": "HLT/Higgs/HWW/EffVsPt_HLT_Mu9_EM",
+        "description": "Trigger efficiency for HLT_Mu9 vs muon pt .For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/TriggerValidationHiggs\">here</a>."
+      },
+      {
+        "title": "Higgs/HLTEle10LWL1R eff vs pt ",
+        "path": "HLT/Higgs/HWW/EffVsPt_HLT_Ele10_LW_L1R_EM",
+        "description": "Trigger efficiency for HLT_Ele10_LW_L1R  vs electron pt .For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/TriggerValidationHiggs\">here</a>."
+      },
+      {
+        "title": "Higgs/HLTEle10LWL1R eff vs eta",
+        "path": "HLT/Higgs/HWW/EffVsEta_HLT_Ele10_LW_L1R_EM",
+        "description": "Trigger efficiency for HLT_Ele10_LW_L1R  vs electron eta .For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/TriggerValidationHiggs\">here</a>."
+      },
+      {
+        "title": "Higgs/HLTDoublePhoton10L1R eff vs eta",
+        "path": "HLT/Higgs/Hgg/EffVsEta_HLT_DoublePhoton10_L1R",
+        "description": "Trigger efficiency for HLT_DoublePhoton10_L1R vs photon eta. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/TriggerValidationHiggs\">here</a>. "
+      },
+      {
+        "title": "Higgs/HLTDoublePhoton10L1R eff vs pt",
+        "path": "HLT/Higgs/Hgg/EffVsPt_HLT_DoublePhoton10_L1R",
+        "description": "Trigger efficiency for HLT_DoublePhoton10_L1R vs photon pt .For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/TriggerValidationHiggs\">here</a>."
+      }
+    ]
+  },
+  {
+    "subsystem": "Info",
+    "source_file": "shift_info_layout.py",
+    "plots": [
+      {
+        "title": "00-InfoReportSummary",
+        "path": "Info/EventInfo/reportSummaryMap",
+        "description": "<a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftInfo>Description and Instructions</a>"
+      },
+      {
+        "title": "01-InfoBeamMode",
+        "path": "Info/LhcInfo/beamMode",
+        "description": "<a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftInfo>Description and Instructions</a>"
+      }
+    ]
+  },
+  {
+    "subsystem": "L1TEMU",
+    "source_file": "shift_l1temulator_layout.py",
+    "plots": [
+      {
+        "title": "00 - uGMT - data vs emulator misMatch ratio",
+        "path": "L1TEMU/L1TdeStage2uGMT/data_vs_emulator_comparison/mismatchRatio",
+        "description": "uGMT - data vs emulator misMatch ratio. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftTriggerEmulator\">here</a>."
+      },
+      {
+        "title": "01 - BMTF - data vs emulator misMatch ratio",
+        "path": "L1TEMU/L1TdeStage2BMTF/mismatchRatio",
+        "description": "BMTF - data vs emulator misMatch ratio. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftTriggerEmulator\">here</a>."
+      },
+      {
+        "title": "02 - OMTF - data vs emulator misMatch ratio",
+        "path": "L1TEMU/L1TdeStage2OMTF/mismatchRatio",
+        "description": "OMTF - data vs emulator misMatch ratio. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftTriggerEmulator\">here</a>."
+      },
+      {
+        "title": "03 - EMTF - data vs emulator misMatch ratio",
+        "path": "L1TEMU/L1TdeStage2EMTF/mismatchRatio",
+        "description": "EMTF - data vs emulator misMatch ratio. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftTriggerEmulator\">here</a>."
+      },
+      {
+        "title": "04 - CaloLayer1 - data vs emulator misMatch ratio",
+        "path": "L1TEMU/L1TdeStage2CaloLayer1/dataEmulSummary",
+        "description": "CaloLayer1 - data vs emulator misMatch ratio. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftTriggerEmulator\">here</a>."
+      },
+      {
+        "title": "05 - CaloLayer2 - High Level Data-Emulator Agreement Summary",
+        "path": "L1TEMU/L1TStage2CaloLayer2/L1TdeStage2CaloLayer2/High level summary",
+        "description": "Event by event comparison Data-Emulator Agreement Summary. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftTriggerEmulator\">here</a>."
+      },
+      {
+        "title": "06 - CaloLayer2 - Jet Data-Emulator Agreement Summary",
+        "path": "L1TEMU/L1TStage2CaloLayer2/L1TdeStage2CaloLayer2/Jet Agreement Summary",
+        "description": "Jet Data-Emulator Agreement Summary. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftTriggerEmulator\">here</a>."
+      },
+      {
+        "title": "07 - CaloLayer2 - EG Data-Emulator Agreement Summary",
+        "path": "L1TEMU/L1TStage2CaloLayer2/L1TdeStage2CaloLayer2/EG Agreement Summary",
+        "description": "EG Data-Emulator Agreement Summary. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftTriggerEmulator\">here</a>."
+      },
+      {
+        "title": "08 - CaloLayer2 - Tau Data-Emulator Agreement Summary",
+        "path": "L1TEMU/L1TStage2CaloLayer2/L1TdeStage2CaloLayer2/Tau Agreement Summary",
+        "description": "Tau Data-Emulator Agreement Summary. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftTriggerEmulator\">here</a>."
+      },
+      {
+        "title": "09 - CaloLayer2 - Energy Sum Data-Emulator Agreement Summary",
+        "path": "L1TEMU/L1TStage2CaloLayer2/L1TdeStage2CaloLayer2/Energy Sum Agreement Summary",
+        "description": "Energy Sum Data-Emulator Agreement Summary. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftTriggerEmulator\">here</a>."
+      },
+      {
+        "title": "10 - CaloLayer2 - Problem Summary",
+        "path": "L1TEMU/L1TStage2CaloLayer2/L1TdeStage2CaloLayer2/Problem Summary",
+        "description": "Problematic Event Summary. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftTriggerEmulator\">here</a>."
+      },
+      {
+        "title": "11 - uGT - Data-Emulator misMatch ratio",
+        "path": "L1TEMU/L1TdeStage2uGT/dataEmulMismatchRatio_CentralBX",
+        "description": "uGT Data-Emulator misMatch ratio -- Central BX. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftTriggerEmulator\">here</a>."
+      }
+    ]
+  },
+  {
+    "subsystem": "L1T",
+    "source_file": "shift_l1t_layout.py",
+    "plots": [
+      {
+        "title": "00 - CaloLayer1 ECAL occupancy",
+        "path": "L1T/L1TStage2CaloLayer1/ecalOccRecdEtWgt",
+        "description": "CaloLayer1 ECAL Et-weighted occupancy. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftL1T\">here</a>."
+      },
+      {
+        "title": "01 - CaloLayer1 HCAL occupancy",
+        "path": "L1T/L1TStage2CaloLayer1/hcalOccRecdEtWgt",
+        "description": "CaloLayer1 HCAL Et-weighted occupancy. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftL1T\">here</a>."
+      },
+      {
+        "title": "02 - CaloLayer2 central jet E_T eta phi",
+        "path": "L1T/L1TStage2CaloLayer2/shifter/CenJetsEtEtaPhi_shift",
+        "description": "CaloLayer2 central jet E_T eta phi. x-axis: CaloLayer2 central jet E_T eta; y-axis: CaloLayer2 central jet E_T phi. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftL1T\">here</a>."
+      },
+      {
+        "title": "03 - CaloLayer2 forward jet E_T eta phi",
+        "path": "L1T/L1TStage2CaloLayer2/shifter/ForJetsEtEtaPhi_shift",
+        "description": "CaloLayer2 forward jet E_T eta phi. x-axis: CaloLayer2 forward jet E_T eta; y-axis: CaloLayer2 forward jet E_T phi. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftL1T\">here</a>."
+      },
+      {
+        "title": "04 - CaloLayer2 iso EG E_T eta phi",
+        "path": "L1T/L1TStage2CaloLayer2/shifter/IsoEGsEtEtaPhi_shift",
+        "description": "CaloLayer2 iso EG E_T eta phi. x-axis: CaloLayer2 iso EG E_T eta; y-axis: CaloLayer2 iso EG E_T phi. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftL1T\">here</a>."
+      },
+      {
+        "title": "05 - CaloLayer2 noniso EG E_T eta phi",
+        "path": "L1T/L1TStage2CaloLayer2/shifter/NonIsoEGsEtEtaPhi_shift",
+        "description": "CaloLayer2 noniso EG E_T eta phi. x-axis: CaloLayer2 noniso EG E_T eta; y-axis: CaloLayer2 noniso EG E_T phi. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftL1T\">here</a>."
+      },
+      {
+        "title": "06 - CaloLayer2 iso tau E_T eta phi",
+        "path": "L1T/L1TStage2CaloLayer2/shifter/IsoTausEtEtaPhi_shift",
+        "description": "CaloLayer2 iso tau E_T eta phi. x-axis: CaloLayer2 iso tau E_T eta; y-axis: CaloLayer2 iso tau E_T phi. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftL1T\">here</a>."
+      },
+      {
+        "title": "07 - CaloLayer2 noniso tau E_T eta phi",
+        "path": "L1T/L1TStage2CaloLayer2/shifter/TausEtEtaPhi_shift",
+        "description": "CaloLayer2 noniso tau E_T eta phi. x-axis: CaloLayer2 noniso tau E_T eta; y-axis: CaloLayer2 noniso tau E_T phi. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftL1T\">here</a>."
+      },
+      {
+        "title": "08 - uGMT muon p_T",
+        "path": "L1T/L1TStage2uGMT/ugmtMuonPt",
+        "description": "uGMT muon p_T. x-axis: uGMT muon p_T. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftL1T\">here</a>."
+      },
+      {
+        "title": "09 - uGMT muon eta",
+        "path": "L1T/L1TStage2uGMT/ugmtMuonEta",
+        "description": "uGMT muon eta. x-axis: uGMT muon eta. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftL1T\">here</a>."
+      },
+      {
+        "title": "10 - uGMT muon phi",
+        "path": "L1T/L1TStage2uGMT/ugmtMuonPhi",
+        "description": "uGMT muon phi. x-axis: uGMT muon phi. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftL1T\">here</a>."
+      },
+      {
+        "title": "11 - uGMT muon eta phi",
+        "path": "L1T/L1TStage2uGMT/ugmtMuonPhivsEta",
+        "description": "uGMT muon eta phi. x-axis: uGMT muon eta; y-axis: uGMT muon phi. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftL1T\">here</a>."
+      },
+      {
+        "title": "12 - uGMT muon eta phi at vertex",
+        "path": "L1T/L1TStage2uGMT/ugmtMuonPhiAtVtxvsEtaAtVtx",
+        "description": "uGMT muon eta phi at vertex. x-axis: uGMT muon eta at vertex; y-axis: uGMT muon phi at vertex. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftL1T\">here</a>."
+      },
+      {
+        "title": "13 - uGMT input link vs. input muon BX",
+        "path": "L1T/L1TStage2uGMT/ugmtBXvsLink",
+        "description": "uGMT input link vs. input muon BX. x-axis: uGMT input link from (B)MTF, O(MTF), or (E)MTF; y-axis: uGMT input muon BX. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftL1T\">here</a>."
+      },
+      {
+        "title": "14 - uGMT input link vs. muon charge",
+        "path": "L1T/L1TStage2uGMT/ugmtMuonChargevsLink",
+        "description": "uGMT muon charge vs. input link. x-axis: uGMT input link from (B)MTF, O(MTF), or (E)MTF; y-axis: uGMT muon charge. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftL1T\">here</a>."
+      },
+      {
+        "title": "15 - EMTF Chamber Occupancy",
+        "path": "L1T/L1TStage2EMTF/cscLCTOccupancy",
+        "description": "EMTF CSC chamber Occupancy. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftL1T\">here</a>."
+      },
+      {
+        "title": "16 - EMTF Track Bunch Crossing",
+        "path": "L1T/L1TStage2EMTF/emtfTrackBX",
+        "description": "EMTF Track Bunch Crossing. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftL1T\">here</a>."
+      },
+      {
+        "title": "17 - uGT Algorithm Trigger Bits (after prescale) vs. Global BX Number",
+        "path": "L1T/L1TStage2uGT/algoBits_after_prescale_bx_global",
+        "description": "uGT Algorithm Trigger Bits (after prescale) vs. Global BX Number. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftL1T\">here</a>."
+      },
+      {
+        "title": "18 - uGT Algorithm Trigger Bits (after prescale) vs. BX Number in Event",
+        "path": "L1T/L1TStage2uGT/algoBits_after_prescale_bx_inEvt",
+        "description": "uGT Algorithm Trigger Bits (after prescale) vs. BX Number in Event. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftL1T\">here</a>."
+      },
+      {
+        "title": "19 - uGT # of unprescaled algo accepts relative to # of all algo accepts in +-2 BX vs. BX number in event for first bunch in train",
+        "path": "L1T/L1TStage2uGT/Ratio_Unprescaled_First_Bunch_In_Train",
+        "description": "uGT number of unprescaled algo accepts relative to number of all unprescaled algo accepts in +/-2 BX vs. BX number in event for first bunch in train. x-axis: BX number in event for first bunch in a bunch train; y-axis: uGT algorithms (before prescale); z-axis: number of algo accepts relative to number of all algo accepts in +/-2 BX. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftL1T\">here</a>."
+      },
+      {
+        "title": "20 - uGT # of unprescaled algo accepts relative to # of all algo accepts in +-2 BX vs. BX number in event for last bunch in train",
+        "path": "L1T/L1TStage2uGT/Ratio_Unprescaled_Last_Bunch_In_Train",
+        "description": "uGT number of unprescaled algo accepts relative to number of all unprescaled algo accepts in +/-2 BX vs. BX number in event last bunch in train. x-axis: BX number in event for last bunch in a bunch train; y-axis: uGT algorithms (before prescale); z-axis: number of algo accepts relative to number of all algo accepts in +/-2 BX. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftL1T\">here</a>."
+      },
+      {
+        "title": "21 - uGT # of prescaled algo accepts relative to # of all algo accepts in +-2 BX vs. BX number in event for first bunch in train",
+        "path": "L1T/L1TStage2uGT/Ratio_Prescaled_First_Bunch_In_Train",
+        "description": "uGT number of prescaled algo accepts relative to number of all prescaled algo accepts in +/-2 BX vs. BX number in event for first bunch in train. x-axis: BX number in event for first bunch in a bunch train; y-axis: uGT algorithms (before prescale); z-axis: number of algo accepts relative to number of all algo accepts in +/-2 BX. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftL1T\">here</a>."
+      },
+      {
+        "title": "22 - uGT # of prescaled algo accepts relative to # of all algo accepts in +-2 BX vs. BX number in event for last bunch in train",
+        "path": "L1T/L1TStage2uGT/Ratio_Prescaled_Last_Bunch_In_Train",
+        "description": "uGT number of prescaled algo accepts relative to number of all prescaled algo accepts in +/-2 BX vs. BX number in event last bunch in train. x-axis: BX number in event for last bunch in a bunch train; y-axis: uGT algorithms (before prescale); z-axis: number of algo accepts relative to number of all algo accepts in +/-2 BX. For more information please click <a href=\"https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftL1T\">here</a>."
+      },
+      {
+        "title": "23 - Ratio L1TMuons BX FirstBunch minus1",
+        "path": "L1T/L1TObjects/L1TMuon/timing/First_bunch/Ratio_L1TMuons_BX_FirstBunch_minus1",
+        "description": "Fraction of L1T Muon objects found in BX -1 over all L1T Muon objects found in a BX range of +/-2 BX around BX 0."
+      },
+      {
+        "title": "24 - Ratio L1TJet BX FirstBunch minus1",
+        "path": "L1T/L1TObjects/L1TJet/timing/First_bunch/Ratio_L1TJet_BX_FirstBunch_minus1",
+        "description": "Fraction of L1T Jet objects found in BX -1 over all L1T Jet objects found in a BX range of +/-2 BX around BX 0."
+      },
+      {
+        "title": "25 - Ratio L1TEGamma ptmin 20p0 gev BX FirstBunch minus1",
+        "path": "L1T/L1TObjects/L1TEGamma/timing/First_bunch/Ratio_L1TEGamma_ptmin_20p0_gev_BX_FirstBunch_minus1",
+        "description": "Fraction of L1T EGamma objects with pT >= 20 GeV found in BX -1 over all L1T EGamma objects with pT >= 20 GeV found in a BX range of +/-2 BX around BX 0"
+      }
+    ]
+  },
+  {
+    "subsystem": "PFlow",
+    "source_file": "shift_pflow_relval_layout.py",
+    "plots": [
+      {
+        "title": "01 - Jet Pt Resolution - Barrel",
+        "path": "ParticleFlow/ElectronValidation/JetPtRes/average_BRdelta_et_Over_et_VS_et_",
+        "description": "Average value of Pt resolution for jets in Barrel"
+      },
+      {
+        "title": "01 - Jet Pt Resolution - Barrel",
+        "path": "ParticleFlow/ElectronValidation/JetPtRes/rms_BRdelta_et_Over_et_VS_et_",
+        "description": "RMS value of Pt resolution for jets in Barrel"
+      },
+      {
+        "title": "01 - Jet Pt Resolution - Barrel",
+        "path": "ParticleFlow/ElectronValidation/JetPtRes/mean_BRdelta_et_Over_et_VS_et_",
+        "description": "Mean value of Pt resolution for jets in Barrel"
+      },
+      {
+        "title": "01 - Jet Pt Resolution - Barrel",
+        "path": "ParticleFlow/ElectronValidation/JetPtRes/sigma_BRdelta_et_Over_et_VS_et_",
+        "description": "Sigma value of Pt resolution for jets in Barrel"
+      },
+      {
+        "title": "02 - Jet Pt Resolution - Endcap",
+        "path": "ParticleFlow/ElectronValidation/JetPtRes/average_ERdelta_et_Over_et_VS_et_",
+        "description": "Average value of Pt resolution for jets in Endcap"
+      },
+      {
+        "title": "02 - Jet Pt Resolution - Endcap",
+        "path": "ParticleFlow/ElectronValidation/JetPtRes/rms_ERdelta_et_Over_et_VS_et_",
+        "description": "RMS value of Pt resolution for jets in Endcap"
+      },
+      {
+        "title": "02 - Jet Pt Resolution - Endcap",
+        "path": "ParticleFlow/ElectronValidation/JetPtRes/mean_ERdelta_et_Over_et_VS_et_",
+        "description": "Mean value of Pt resolution for jets in Endcap"
+      },
+      {
+        "title": "02 - Jet Pt Resolution - Endcap",
+        "path": "ParticleFlow/ElectronValidation/JetPtRes/sigma_ERdelta_et_Over_et_VS_et_",
+        "description": "Sigma value of Pt resolution for jets in Endcap"
+      },
+      {
+        "title": "03 - Jet Pt Resolution distribution - Barrel",
+        "path": "ParticleFlow/ElectronValidation/JetPtRes/BRPt20_40",
+        "description": "Pt resolution for jets in Barrel"
+      },
+      {
+        "title": "03 - Jet Pt Resolution distribution - Barrel",
+        "path": "ParticleFlow/ElectronValidation/JetPtRes/BRPt40_60",
+        "description": "Pt resolution for jets in Barrel"
+      },
+      {
+        "title": "03 - Jet Pt Resolution distribution - Barrel",
+        "path": "ParticleFlow/ElectronValidation/JetPtRes/BRPt60_80",
+        "description": "Pt resolution for jets in Barrel"
+      },
+      {
+        "title": "03 - Jet Pt Resolution distribution - Barrel",
+        "path": "ParticleFlow/ElectronValidation/JetPtRes/BRPt80_100",
+        "description": "Pt resolution for jets in Barrel"
+      },
+      {
+        "title": "03 - Jet Pt Resolution distribution - Barrel",
+        "path": "ParticleFlow/ElectronValidation/JetPtRes/BRPt100_150",
+        "description": "Pt resolution for jets in Barrel"
+      },
+      {
+        "title": "03 - Jet Pt Resolution distribution - Barrel",
+        "path": "ParticleFlow/ElectronValidation/JetPtRes/BRPt150_200",
+        "description": "Pt resolution for jets in Barrel"
+      },
+      {
+        "title": "03 - Jet Pt Resolution distribution - Barrel",
+        "path": "ParticleFlow/ElectronValidation/JetPtRes/BRPt200_250",
+        "description": "Pt resolution for jets in Barrel"
+      },
+      {
+        "title": "03 - Jet Pt Resolution distribution - Barrel",
+        "path": "ParticleFlow/ElectronValidation/JetPtRes/BRPt250_300",
+        "description": "Pt resolution for jets in Barrel"
+      },
+      {
+        "title": "03 - Jet Pt Resolution distribution - Barrel",
+        "path": "ParticleFlow/ElectronValidation/JetPtRes/BRPt300_400",
+        "description": "Pt resolution for jets in Barrel"
+      },
+      {
+        "title": "03 - Jet Pt Resolution distribution - Barrel",
+        "path": "ParticleFlow/ElectronValidation/JetPtRes/BRPt400_500",
+        "description": "Pt resolution for jets in Barrel"
+      },
+      {
+        "title": "03 - Jet Pt Resolution distribution - Barrel",
+        "path": "ParticleFlow/ElectronValidation/JetPtRes/BRPt500_750",
+        "description": "Pt resolution for jets in Barrel"
+      },
+      {
+        "title": "04 - Jet Pt Resolution distribution - Endcap",
+        "path": "ParticleFlow/ElectronValidation/JetPtRes/ERPt20_40",
+        "description": "Pt resolution for jets in Endcap"
+      },
+      {
+        "title": "04 - Jet Pt Resolution distribution - Endcap",
+        "path": "ParticleFlow/ElectronValidation/JetPtRes/ERPt40_60",
+        "description": "Pt resolution for jets in Endcap"
+      },
+      {
+        "title": "04 - Jet Pt Resolution distribution - Endcap",
+        "path": "ParticleFlow/ElectronValidation/JetPtRes/ERPt60_80",
+        "description": "Pt resolution for jets in Endcap"
+      },
+      {
+        "title": "04 - Jet Pt Resolution distribution - Endcap",
+        "path": "ParticleFlow/ElectronValidation/JetPtRes/ERPt80_100",
+        "description": "Pt resolution for jets in Endcap"
+      },
+      {
+        "title": "04 - Jet Pt Resolution distribution - Endcap",
+        "path": "ParticleFlow/ElectronValidation/JetPtRes/ERPt100_150",
+        "description": "Pt resolution for jets in Endcap"
+      },
+      {
+        "title": "04 - Jet Pt Resolution distribution - Endcap",
+        "path": "ParticleFlow/ElectronValidation/JetPtRes/ERPt150_200",
+        "description": "Pt resolution for jets in Endcap"
+      },
+      {
+        "title": "04 - Jet Pt Resolution distribution - Endcap",
+        "path": "ParticleFlow/ElectronValidation/JetPtRes/ERPt200_250",
+        "description": "Pt resolution for jets in Endcap"
+      },
+      {
+        "title": "04 - Jet Pt Resolution distribution - Endcap",
+        "path": "ParticleFlow/ElectronValidation/JetPtRes/ERPt250_300",
+        "description": "Pt resolution for jets in Endcap"
+      },
+      {
+        "title": "04 - Jet Pt Resolution distribution - Endcap",
+        "path": "ParticleFlow/ElectronValidation/JetPtRes/ERPt300_400",
+        "description": "Pt resolution for jets in Endcap"
+      },
+      {
+        "title": "04 - Jet Pt Resolution distribution - Endcap",
+        "path": "ParticleFlow/ElectronValidation/JetPtRes/ERPt400_500",
+        "description": "Pt resolution for jets in Endcap"
+      },
+      {
+        "title": "04 - Jet Pt Resolution distribution - Endcap",
+        "path": "ParticleFlow/ElectronValidation/JetPtRes/ERPt500_750",
+        "description": "Pt resolution for jets in Endcap"
+      }
+    ]
+  },
+  {
+    "subsystem": "PixelLumi",
+    "source_file": "shift_pixellumi_layout.py",
+    "plots": [
+      {
+        "title": "00 - HFDeliveredToPXByLS",
+        "path": "PixelLumi/PixelLumiDqmZeroBias/HFDeliveredToPXByLS",
+        "description": ""
+      },
+      {
+        "title": "01 - HFRecordedToPXByLS",
+        "path": "PixelLumi/PixelLumiDqmZeroBias/HFRecordedToPXByLS",
+        "description": ""
+      },
+      {
+        "title": "02 - totalPixelLumiByLS",
+        "path": "PixelLumi/PixelLumiDqmZeroBias/totalPixelLumiByLS",
+        "description": ""
+      },
+      {
+        "title": "03 - PXLumiByBXsum",
+        "path": "PixelLumi/PixelLumiDqmZeroBias/PXLumiByBXsum",
+        "description": ""
+      },
+      {
+        "title": "04 - totalHFDeliveredLumiByLS",
+        "path": "PixelLumi/HF/totalHFDeliveredLumiByLS",
+        "description": ""
+      },
+      {
+        "title": "05 - totalHFRecordedLumiByLS",
+        "path": "PixelLumi/HF/totalHFRecordedLumiByLS",
+        "description": ""
+      },
+      {
+        "title": "06 - HFRecordedToDeliveredRatioByLS",
+        "path": "PixelLumi/HF/HFRecordedToDeliveredRatioByLS",
+        "description": ""
+      }
+    ]
+  },
+  {
+    "subsystem": "PixelPhase1",
+    "source_file": "shift_pixelPhase1_layout.py",
+    "plots": [
+      {
+        "title": "00 - PixelPhase1 ReportSummary: Layer or Disk vs subdet",
+        "path": "PixelPhase1/EventInfo/reportSummaryMap",
+        "description": "Summary results of qulity tests: Layer/Disk (y-axis) vs. Subdetectors (x-axis). See the PixelPhase1/Summary/ directory for more details."
+      },
+      {
+        "title": "02 - PixelPhase1 Digis: Ladder vs Module barrel summary",
+        "path": "PixelPhase1/Phase1_MechanicalView/PXBarrel/num_digis_per_SignedModule_per_SignedLadder_PXLayer_1",
+        "description": "Profile of digis per event and DetID by signed ladder (y-axis) vs signed module (x-axis) in layer 1 of barrel"
+      },
+      {
+        "title": "02 - PixelPhase1 Digis: Ladder vs Module barrel summary",
+        "path": "PixelPhase1/Phase1_MechanicalView/PXBarrel/num_digis_per_SignedModule_per_SignedLadder_PXLayer_2",
+        "description": "Profile of digis per event and DetID by signed ladder (y-axis) vs signed module (x-axis) in layer 2 of barrel"
+      },
+      {
+        "title": "02 - PixelPhase1 Digis: Ladder vs Module barrel summary",
+        "path": "PixelPhase1/Phase1_MechanicalView/PXBarrel/num_digis_per_SignedModule_per_SignedLadder_PXLayer_3",
+        "description": "Profile of digis per event and DetID by signed ladder (y-axis) vs signed module (x-axis) in layer 3 of barrel"
+      },
+      {
+        "title": "02 - PixelPhase1 Digis: Ladder vs Module barrel summary",
+        "path": "PixelPhase1/Phase1_MechanicalView/PXBarrel/num_digis_per_SignedModule_per_SignedLadder_PXLayer_4",
+        "description": "Profile of digis per event and DetID by signed ladder (y-axis) vs signed module (x-axis) in layer 4 of barrel"
+      },
+      {
+        "title": "03 - PixelPhase1 Digis: BladePannel vs Disk endcap summary",
+        "path": "PixelPhase1/Phase1_MechanicalView/PXForward/num_digis_per_PXDisk_per_SignedBladePanel_PXRing_1",
+        "description": "Profile of number of digis per event and detId by signed blade pannel (y-axis) vs signed disk (x-axis) in ring 1 of endcap"
+      },
+      {
+        "title": "03 - PixelPhase1 Digis: BladePannel vs Disk endcap summary",
+        "path": "PixelPhase1/Phase1_MechanicalView/PXForward/num_digis_per_PXDisk_per_SignedBladePanel_PXRing_2",
+        "description": "Profile of number of digis per event and detId by signed blade pannel (y-axis) vs signed disk (x-axis) in ring 2 of endcap"
+      },
+      {
+        "title": "06 - PixelPhase1 Dead Channels per ROC: Ladder vs Module barrel summary",
+        "path": "PixelPhase1/FED/Dead Channels per ROC_per_SignedModuleCoord_per_SignedLadderCoord_PXLayer_1",
+        "description": "Profile of dead channels per ROC by signed ladder (y-axis) vs signed module (x-axis) in layer 1 of barrel"
+      },
+      {
+        "title": "06 - PixelPhase1 Dead Channels per ROC: Ladder vs Module barrel summary",
+        "path": "PixelPhase1/FED/Dead Channels per ROC_per_SignedModuleCoord_per_SignedLadderCoord_PXLayer_2",
+        "description": "Profile of dead channels per ROC by signed ladder (y-axis) vs signed module (x-axis) in layer 2 of barrel"
+      },
+      {
+        "title": "06 - PixelPhase1 Dead Channels per ROC: Ladder vs Module barrel summary",
+        "path": "PixelPhase1/FED/Dead Channels per ROC_per_SignedModuleCoord_per_SignedLadderCoord_PXLayer_3",
+        "description": "Profile of dead channels per ROC by signed ladder (y-axis) vs signed module (x-axis) in layer 3 of barrel"
+      },
+      {
+        "title": "06 - PixelPhase1 Dead Channels per ROC: Ladder vs Module barrel summary",
+        "path": "PixelPhase1/FED/Dead Channels per ROC_per_SignedModuleCoord_per_SignedLadderCoord_PXLayer_4",
+        "description": "Profile of dead channels per ROC by signed ladder (y-axis) vs signed module (x-axis) in layer 4 of barrel"
+      },
+      {
+        "title": "07 - PixelPhase1 Dead Channels per ROC: BladePannel vs Disk endcap summary",
+        "path": "PixelPhase1/FED/Dead Channels per ROC_per_SignedDiskCoord_per_SignedBladePanelCoord_PXRing_1",
+        "description": "Profile of number of dead Channels per ROC by signed blade pannel (y-axis) vs signed disk (x-axis) in ring 1 of endcap"
+      },
+      {
+        "title": "07 - PixelPhase1 Dead Channels per ROC: BladePannel vs Disk endcap summary",
+        "path": "PixelPhase1/FED/Dead Channels per ROC_per_SignedDiskCoord_per_SignedBladePanelCoord_PXRing_2",
+        "description": "Profile of number of dead Channels per ROC by signed blade pannel (y-axis) vs signed disk (x-axis) in ring 2 of endcap"
+      },
+      {
+        "title": "08 - Compare number of objects GPUvsCPU",
+        "path": "SiPixelHeterogeneous/PixelRecHitsCompareGPUvsCPU/nHits",
+        "description": "No of RecHits GPU vs CPU"
+      },
+      {
+        "title": "08 - Compare number of objects GPUvsCPU",
+        "path": "SiPixelHeterogeneous/PixelTrackCompareGPUvsCPU/nLooseAndAboveTracks",
+        "description": "No of pixel tracks with quality >= loose GPU vs CPU"
+      },
+      {
+        "title": "08 - Compare number of objects GPUvsCPU",
+        "path": "SiPixelHeterogeneous/PixelVertexCompareGPUvsCPU/nVertex",
+        "description": "No of reconstructed vertices GPU vs CPU"
+      },
+      {
+        "title": "09 - FED error unbalance GPUvsCPU",
+        "path": "SiPixelHeterogeneous/PixelErrorCompareGPUvsCPU/FEErrorVsFEDIdUnbalance",
+        "description": "Unbalance of Pixel FED Raw Data errors in GPU vs CPU"
+      },
+      {
+        "title": "10 - Compare track properties",
+        "path": "SiPixelHeterogeneous/PixelTrackCompareGPUvsCPU/eta",
+        "description": "Compare track #eta"
+      },
+      {
+        "title": "10 - Compare track properties",
+        "path": "SiPixelHeterogeneous/PixelTrackCompareGPUvsCPU/phi",
+        "description": "Compare track #phi"
+      },
+      {
+        "title": "10 - Compare track properties",
+        "path": "SiPixelHeterogeneous/PixelTrackCompareGPUvsCPU/pt",
+        "description": "Compare track pt"
+      },
+      {
+        "title": "10 - Compare track properties",
+        "path": "SiPixelHeterogeneous/PixelTrackCompareGPUvsCPU/nRecHits",
+        "description": "Compare number of rechits per track"
+      },
+      {
+        "title": "11 - Compare vertices",
+        "path": "SiPixelHeterogeneous/PixelVertexCompareGPUvsCPU/chi2oNdof",
+        "description": "Compare Vertex chi-squared/Ndof"
+      },
+      {
+        "title": "11 - Compare vertices",
+        "path": "SiPixelHeterogeneous/PixelVertexCompareGPUvsCPU/vz",
+        "description": "Compare vertex z"
+      },
+      {
+        "title": "11 - Compare vertices",
+        "path": "SiPixelHeterogeneous/PixelVertexCompareGPUvsCPU/ntrk",
+        "description": "Compare number of tracks associated to a vertex"
+      },
+      {
+        "title": "11 - Compare vertices",
+        "path": "SiPixelHeterogeneous/PixelVertexCompareGPUvsCPU/ptsq",
+        "description": "Compare vertex pt squared"
+      },
+      {
+        "title": "12 - Difference in rechit position",
+        "path": "SiPixelHeterogeneous/PixelRecHitsCompareGPUvsCPU/rechitsposXDiffBpix",
+        "description": "x-position difference in Barrel"
+      },
+      {
+        "title": "12 - Difference in rechit position",
+        "path": "SiPixelHeterogeneous/PixelRecHitsCompareGPUvsCPU/rechitsposXDiffFpix",
+        "description": "x-position difference in Forward"
+      },
+      {
+        "title": "12 - Difference in rechit position",
+        "path": "SiPixelHeterogeneous/PixelRecHitsCompareGPUvsCPU/rechitsposYDiffBpix",
+        "description": "y-position difference in Barrel"
+      },
+      {
+        "title": "12 - Difference in rechit position",
+        "path": "SiPixelHeterogeneous/PixelRecHitsCompareGPUvsCPU/rechitsposYDiffFpix",
+        "description": "y-position difference in Forward"
+      },
+      {
+        "title": "13 - Difference in rechit size",
+        "path": "SiPixelHeterogeneous/PixelRecHitsCompareGPUvsCPU/rechitsizeXDiffBpix",
+        "description": "size x difference in Barrel"
+      },
+      {
+        "title": "13 - Difference in rechit size",
+        "path": "SiPixelHeterogeneous/PixelRecHitsCompareGPUvsCPU/rechitsizeXDiffFpix",
+        "description": "size x difference in Forward"
+      },
+      {
+        "title": "13 - Difference in rechit size",
+        "path": "SiPixelHeterogeneous/PixelRecHitsCompareGPUvsCPU/rechitsizeYDiffBpix",
+        "description": "size y difference in Barrel"
+      },
+      {
+        "title": "13 - Difference in rechit size",
+        "path": "SiPixelHeterogeneous/PixelRecHitsCompareGPUvsCPU/rechitsizeYDiffFpix",
+        "description": "size y difference in Forward"
+      }
+    ]
+  },
+  {
+    "subsystem": "RPC",
+    "source_file": "shift_rpc_layout.py",
+    "plots": [
+      {
+        "title": "00-Summary_Map",
+        "path": "RPC/EventInfo/reportSummaryMap",
+        "description": "summary map for rpc, this is NOT an efficiency measurement   >>> <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftRPC>Description</a>"
+      },
+      {
+        "title": "01-Noisy_summary_Map",
+        "path": "RPC/EventInfo/noisySummaryMap",
+        "description": "Average number of noisy strip per roll, counted if a occupancy of single strip is greater than 3.5 times the average of a chamber   >>> <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftRPC>Description</a>"
+      },
+      {
+        "title": "02-Fatal_FED_Errors",
+        "path": "RPC/FEDIntegrity_EvF/FEDFatal",
+        "description": "FED Fatal Errors   >>> <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftRPC>Description</a>"
+      },
+      {
+        "title": "04-RPC_Events",
+        "path": "RPC/AllHits/RPCEvents",
+        "description": "Events processed by the RPC DQM   >>> <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftRPC>Description</a>"
+      },
+      {
+        "title": "04-RPC_Occupancy",
+        "path": "RPC/AllHits/SummaryHistograms/Occupancy_for_Barrel",
+        "description": "Occupancy per sector   >>> <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftRPC>Description</a>"
+      },
+      {
+        "title": "04-RPC_Occupancy",
+        "path": "RPC/AllHits/SummaryHistograms/Occupancy_for_Endcap",
+        "description": "Occupancy per sector   >>> <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftRPC>Description</a>"
+      }
+    ]
+  },
+  {
+    "subsystem": "SiStrip",
+    "source_file": "shift_sistrip_layout.py",
+    "plots": [
+      {
+        "title": "00 - SiStrip ReportSummary",
+        "path": "SiStrip/MechanicalView/detFractionReportMap",
+        "description": "Fraction of Good Detector Modules plotted in different parts of the Tracker - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "00 - SiStrip ReportSummary",
+        "path": "SiStrip/MechanicalView/sToNReportMap",
+        "description": "Accepted S/N Ratios in different parts of the Tracker. The values are 1 if the ratio is within the accepted range otherwise it is 0  - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "00 - SiStrip ReportSummary",
+        "path": "SiStrip/EventInfo/reportSummaryMap",
+        "description": "Overall Report Summary where detector fraction and S/N flags are combined together -  <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "01 - FED errors",
+        "path": "SiStrip/ReadoutView/FED/nFEDErrors",
+        "description": "# of FEDs in error per event - Call Tracker DOC 165503 if the mean value is above 10 - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a>"
+      },
+      {
+        "title": "02 - # of Cluster Trend",
+        "path": "SiStrip/MechanicalView/TIB/TotalNumberOfClusterProfile__TIB",
+        "description": "Total # of Clusters in TIB with event time in Seconds  - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "02 - # of Cluster Trend",
+        "path": "SiStrip/MechanicalView/TOB/TotalNumberOfClusterProfile__TOB",
+        "description": "Total # of Clusters in TOB with event time in Seconds  - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "02 - # of Cluster Trend",
+        "path": "SiStrip/MechanicalView/TID/MINUS/TotalNumberOfClusterProfile__TID__MINUS",
+        "description": "Total # of Clusters in TID -ve side with event time in Seconds  - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "02 - # of Cluster Trend",
+        "path": "SiStrip/MechanicalView/TID/PLUS/TotalNumberOfClusterProfile__TID__PLUS",
+        "description": "Total # of Clusters in TID +ve side with event time in Seconds  - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "02 - # of Cluster Trend",
+        "path": "SiStrip/MechanicalView/TEC/MINUS/TotalNumberOfClusterProfile__TEC__MINUS",
+        "description": "Total # of Clusters in TEC -ve side with event time in Seconds  - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "02 - # of Cluster Trend",
+        "path": "SiStrip/MechanicalView/TEC/PLUS/TotalNumberOfClusterProfile__TEC__PLUS",
+        "description": "Total # of Clusters in TEC +ve side with event time in Seconds  - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "03 OnTrackCluster",
+        "path": "SiStrip/MechanicalView/TIB/Summary_ClusterStoNCorr_OnTrack__TIB",
+        "description": "Signal-to-Noise (corrected for the angle) for On-Track clusters in TIB  - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "03 OnTrackCluster",
+        "path": "SiStrip/MechanicalView/TOB/Summary_ClusterStoNCorr_OnTrack__TOB",
+        "description": "Signal-to-Noise (corrected for the angle) for On-Track clusters in TOB  - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "03 OnTrackCluster",
+        "path": "SiStrip/MechanicalView/TID/MINUS/Summary_ClusterStoNCorr_OnTrack__TID__MINUS",
+        "description": "Signal-to-Noise (corrected for the angle) for On-Track clusters in TID -ve side - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "03 OnTrackCluster",
+        "path": "SiStrip/MechanicalView/TID/PLUS/Summary_ClusterStoNCorr_OnTrack__TID__PLUS",
+        "description": "Signal-to-Noise (corrected for the angle) for On-Track clusters in TID +ve side - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "03 OnTrackCluster",
+        "path": "SiStrip/MechanicalView/TEC/MINUS/Summary_ClusterStoNCorr_OnTrack__TEC__MINUS",
+        "description": "Signal-to-Noise (corrected for the angle) for On-Track clusters in TEC -ve side - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "03 OnTrackCluster",
+        "path": "SiStrip/MechanicalView/TEC/PLUS/Summary_ClusterStoNCorr_OnTrack__TEC__PLUS",
+        "description": "Signal-to-Noise (corrected for the angle) for On-Track clusters in TEC +ve side - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "04 - Tracking ReportSummary",
+        "path": "Tracking/EventInfo/reportSummaryMap",
+        "description": " Quality Test results plotted for Tracking parameters : Chi2, TrackRate, #of Hits in Track - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "05 - Tracks (pp collisions)",
+        "path": "Tracking/TrackParameters/GeneralProperties/NumberOfTracks_GenTk",
+        "description": "Number of Reconstructed Tracks with high purity selection and pt > 1 GeV - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "05 - Tracks (pp collisions)",
+        "path": "Tracking/TrackParameters/HitProperties/NumberOfRecHitsPerTrack_GenTk",
+        "description": "Number of RecHits per Track with high purity selection and pt > 1 GeV  - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "05 - Tracks (pp collisions)",
+        "path": "Tracking/TrackParameters/GeneralProperties/TrackPt_ImpactPoint_GenTk",
+        "description": "Pt of Reconstructed Track with high purity selection and pt > 1 GeV  - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "05 - Tracks (pp collisions)",
+        "path": "Tracking/TrackParameters/GeneralProperties/Chi2oNDF_GenTk",
+        "description": "Chi Square per DoF with high purity selection and pt > 1 GeV  -  <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "05 - Tracks (pp collisions)",
+        "path": "Tracking/TrackParameters/GeneralProperties/TrackPhi_ImpactPoint_GenTk",
+        "description": "Phi distribution of Reconstructed Tracks with high purity selection and pt > 1 GeV -  <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "05 - Tracks (pp collisions)",
+        "path": "Tracking/TrackParameters/GeneralProperties/TrackEta_ImpactPoint_GenTk",
+        "description": " Eta distribution of Reconstructed Tracks with high purity selection and pt > 1 GeV - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "06 - Tracks (Cosmic Tracking)",
+        "path": "Tracking/TrackParameters/GeneralProperties/NumberOfTracks_CKFTk",
+        "description": "Number of cosmic tracks  - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "06 - Tracks (Cosmic Tracking)",
+        "path": "Tracking/TrackParameters/HitProperties/NumberOfRecHitsPerTrack_CKFTk",
+        "description": "Number of RecHits per track - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "06 - Tracks (Cosmic Tracking)",
+        "path": "Tracking/TrackParameters/GeneralProperties/TrackPt_CKFTk",
+        "description": "Pt of cosmic track - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "06 - Tracks (Cosmic Tracking)",
+        "path": "Tracking/TrackParameters/GeneralProperties/Chi2oNDF_CKFTk",
+        "description": "Chi Sqare per DoF - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "06 - Tracks (Cosmic Tracking)",
+        "path": "Tracking/TrackParameters/GeneralProperties/TrackPhi_CKFTk",
+        "description": "Phi distribution of cosmic tracks -  <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "06 - Tracks (Cosmic Tracking)",
+        "path": "Tracking/TrackParameters/GeneralProperties/TrackEta_CKFTk",
+        "description": " Eta distribution of cosmic tracks - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "06 - Tracks (HI run)",
+        "path": "Tracking/TrackParameters/GeneralProperties/NumberOfTracks_HeavyIonTk",
+        "description": "Number of HI tracks  - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "06 - Tracks (HI run)",
+        "path": "Tracking/TrackParameters/HitProperties/NumberOfRecHitsPerTrack_HeavyIonTk",
+        "description": "Number of RecHits per track - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "06 - Tracks (HI run)",
+        "path": "Tracking/TrackParameters/GeneralProperties/TrackPt_ImpactPoint_HeavyIonTk",
+        "description": "Pt of HI track - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "06 - Tracks (HI run)",
+        "path": "Tracking/TrackParameters/GeneralProperties/Chi2oNDF_HeavyIonTk",
+        "description": "Chi Sqare per DoF - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "06 - Tracks (HI run)",
+        "path": "Tracking/TrackParameters/GeneralProperties/TrackPhi_ImpactPoint_HeavyIonTk",
+        "description": "Phi distribution of HI tracks -  <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      },
+      {
+        "title": "06 - Tracks (HI run)",
+        "path": "Tracking/TrackParameters/GeneralProperties/TrackEta_ImpactPoint_HeavyIonTk",
+        "description": " Eta distribution of HI tracks - <a href=https://twiki.cern.ch/twiki/bin/view/CMS/DQMShiftSiStrip>DQMShiftOnlineSiStrip</a> "
+      }
+    ]
+  },
+  {
+    "subsystem": "Unknown",
+    "source_file": "shift_timing_layout.py",
+    "plots": []
+  }
+]
