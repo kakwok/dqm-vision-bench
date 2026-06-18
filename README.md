@@ -46,6 +46,64 @@ their subsystem and source file:
 ]
 ```
 
+## Producing Images
+
+`produce_images.ipynb` renders DQM histograms from ROOT files as PNG images, organised by plot name and run number. The images are the primary input for VLM evaluation.
+
+**Output layout**
+```
+images/
+    <plotName>/
+        <plotName>_run<XXXXXX>.png
+```
+
+### Workflow
+
+1. **Set `FILE_PATTERNS`** — XRootD URLs, XRootD globs, or local paths/globs.  `expand_files()` resolves them and prints what was found.
+
+2. **Browse available plots** — Use `shift_layout_helpers` to explore `shift_layouts.json`:
+   ```python
+   list_subsystems()                        # all subsystem names
+   list_plots("L1T")                        # plot titles for L1T
+   list_plots("L1T", with_descriptions=True)  # + path and description
+   format_plot_config("L1T")               # print copy-pasteable PLOT_CONFIG block
+   ```
+
+3. **Configure `PLOT_CONFIG`** — two options:
+   - **Hand-pick** individual plots (paste entries from `format_plot_config()` and remove what you don't need):
+     ```python
+     PLOT_CONFIG = {
+         "ecalOccRecdEtWgt": (
+             "DQMData/Run {run}/L1T/Run summary/L1TStage2CaloLayer1/ecalOccRecdEtWgt"
+         ),
+     }
+     ```
+   - **Use all shift-layout plots** for a subsystem at once:
+     ```python
+     PLOT_CONFIG = build_plot_config("L1T")
+     ```
+
+4. **Run `produce_images()`** — iterates over all resolved files × all configured plots and writes PNGs to `OUTDIR` (default `images/`).
+
+### Key files
+
+| File | Purpose |
+|---|---|
+| `produce_images.ipynb` | Driver notebook — all configuration lives here |
+| `dqm_plot.py` | Core logic: ROOT rendering, file resolution, path expansion |
+| `shift_layout_helpers.py` | Helpers to browse `shift_layouts.json` and generate `PLOT_CONFIG` |
+| `shift_layouts.json` | Structured index of all shift-workspace plots (paths + descriptions) |
+
+### `PLOT_CONFIG` format
+
+Keys become the subdirectory name and PNG filename stem. Values are ROOT object path templates with `{run}` replaced at runtime by the zero-padded 6-digit run number:
+
+```
+DQMData/Run {run}/{Subsystem}/Run summary/{...path...}/{plotName}
+```
+
+The `{run}` value is auto-detected from the filename (`R000XXXXXX`) or overridden via `RUN_OVERRIDE`.
+
 ## RAG Details
 
 Retrieval-Augmented Generation (RAG) injects relevant shift instructions into each query so the model has the specific rules for the plot it is evaluating. The knowledge base is sourced from [archi](https://github.com/archi-physics/archi) and exported as `document_chunks.csv` and `documents.csv`.
