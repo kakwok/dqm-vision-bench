@@ -28,11 +28,14 @@ Output layout (no run_id — overwrites):
         summary.csv
 """
 
+import ast
 import base64
 import os
 import time
 from pathlib import Path
 
+import numpy as np
+import pandas as pd
 import requests
 from dotenv import load_dotenv
 
@@ -125,6 +128,95 @@ def get_knowledge_map() -> dict[str, str]:
 
 
 # ---------------------------------------------------------------------------
+# Local RAG from pre-chunked CSV
+# ---------------------------------------------------------------------------
+
+_chunks_cache: dict[str, pd.DataFrame] = {}
+_bm25_cache:   dict[str, object] = {}
+
+
+def _load_chunks(csv_path: str | Path) -> tuple[pd.DataFrame, object]:
+    key = str(csv_path)
+    if key not in _chunks_cache:
+        from rank_bm25 import BM25Okapi
+        df = pd.read_csv(csv_path)
+        df["_emb"] = df["embedding"].apply(
+            lambda s: np.array(ast.literal_eval(s), dtype=np.float32)
+        )
+        tokenized = [t.lower().split() for t in df["chunk_text"].tolist()]
+        _chunks_cache[key] = df
+        _bm25_cache[key]   = BM25Okapi(tokenized)
+    return _chunks_cache[key], _bm25_cache[key]
+
+
+_embedder = None
+
+def _embed_query(text: str) -> np.ndarray:
+    global _embedder
+    if _embedder is None:
+        from langchain_huggingface import HuggingFaceEmbeddings
+        _embedder = HuggingFaceEmbeddings(
+            model_name="sentence-transformers/all-MiniLM-L6-v2",
+            model_kwargs={"device": "cpu"},
+            encode_kwargs={"normalize_embeddings": True},
+        )
+    return np.array(_embedder.embed_query(text), dtype=np.float32)
+
+
+def retrieve_chunks(
+    query_text: str,
+    csv_path: str | Path = "document_chunks.csv",
+    top_k: int = 5,
+    method: str = "hybrid",
+    alpha: float = 0.5,
+    score_threshold: float = 0.35,
+) -> str:
+    """
+    Retrieve relevant chunks from csv_path and return them as a formatted
+    context string.
+
+    Parameters
+    ----------
+    query_text       : The query to search for.
+    csv_path         : Path to document_chunks.csv.
+    top_k            : Maximum number of chunks to return (used by "top_k" and "hybrid").
+    method           : Retrieval strategy:
+                         "hybrid"    — BM25 + vector scores combined, then top_k (default)
+                         "top_k"     — vector similarity, top_k results
+                         "threshold" — vector similarity, chunks above score_threshold,
+                                       capped at top_k to avoid flooding the context window
+    alpha            : Hybrid only. Weight for vector scores; (1-alpha) goes to BM25.
+    score_threshold  : Threshold only. Minimum cosine similarity to include a chunk
+                       (0.35 is a reasonable floor for all-MiniLM-L6-v2).
+    """
+    df, bm25 = _load_chunks(csv_path)
+
+    q = _embed_query(query_text)
+    emb_matrix = np.stack(df["_emb"].values)
+    q_norm = q / (np.linalg.norm(q) + 1e-10)
+    row_norms = np.linalg.norm(emb_matrix, axis=1, keepdims=True) + 1e-10
+    vec_scores = (emb_matrix / row_norms) @ q_norm                          # (N,)
+
+    if method == "threshold":
+        mask = vec_scores >= score_threshold
+        idx = np.where(mask)[0]
+        top_idx = idx[np.argsort(vec_scores[idx])[::-1]][:top_k]
+
+    elif method == "top_k":
+        top_idx = np.argsort(vec_scores)[::-1][:top_k]
+
+    else:  # hybrid
+        tokens = query_text.lower().split()
+        raw_bm25 = np.array(bm25.get_scores(tokens), dtype=np.float32)
+        bm25_scores = raw_bm25 / (raw_bm25.max() + 1e-10)
+        scores = alpha * vec_scores + (1 - alpha) * bm25_scores
+        top_idx = np.argsort(scores)[::-1][:top_k]
+
+    chunks = df.iloc[top_idx]["chunk_text"].tolist()
+    return "\n\n---\n\n".join(f"[Chunk {i+1}]\n{text}" for i, text in enumerate(chunks))
+
+
+# ---------------------------------------------------------------------------
 # Core query
 # ---------------------------------------------------------------------------
 
@@ -133,33 +225,69 @@ def query(
     *,
     model: str = "",
     system: str = "",
+    reference_image: str | Path | None = None,
+    rag_backend: str = "local",
+    csv_path: str | Path | None = None,
+    top_k: int = 5,
+    method: str = "hybrid",
+    alpha: float = 0.5,
+    score_threshold: float = 0.35,
     image_path: str | Path | None = None,
     collection_ids: list[str] | None = None,
 ) -> dict:
     """
     Send a single query to OpenWebUI and return a result dict.
 
+    The user message is built in four ordered parts:
+      1. reference_image  — optional "good example" image shown before context
+      2. RAG context      — chunks from local CSV or OWUI knowledge collection
+      3. image_path       — the input image to evaluate
+      4. prompt           — the text instruction
+
     Parameters
     ----------
     prompt          : User message text.
     model           : Model ID. Falls back to OWUI_MODEL env var, then server default.
     system          : Optional system prompt.
-    image_path      : Optional path to an image file (requires a vision model).
-    collection_ids  : Optional list of RAG knowledge collection UUIDs.
+    reference_image : Optional path to a reference/example image.
+    rag_backend     : "local" (default) — retrieve from csv_path using retrieve_chunks.
+                      "owui"            — delegate retrieval to OWUI via collection_ids.
+    csv_path        : Path to document_chunks.csv. Required when rag_backend="local".
+    top_k           : Max chunks to retrieve (used by "hybrid" and "top_k" methods).
+    method          : Retrieval strategy — "hybrid" (default), "top_k", or "threshold".
+    alpha           : Hybrid only. Weight for vector scores (1-alpha to BM25).
+    score_threshold : Threshold only. Minimum cosine similarity to include a chunk.
+    image_path      : Path to the input image to evaluate (requires a vision model).
+    collection_ids  : OWUI knowledge collection UUIDs. Required when rag_backend="owui".
 
     Returns
     -------
-    dict with keys: prompt, image, model_used, response, latency_s, error
+    dict with keys: prompt, image, reference_image, rag_backend, model_used, response, latency_s, error
     """
+    if csv_path and collection_ids:
+        raise ValueError(
+            "csv_path and collection_ids are mutually exclusive. "
+            "Set rag_backend='local' with csv_path, or rag_backend='owui' with collection_ids."
+        )
+
     model = model or MODEL
 
+    content = []
+
+    if reference_image:
+        content.append(_image_content_block(reference_image))
+
+    if rag_backend == "local" and csv_path:
+        rag_context = retrieve_chunks(
+            prompt, csv_path=csv_path, top_k=top_k,
+            method=method, alpha=alpha, score_threshold=score_threshold,
+        )
+        content.append({"type": "text", "text": f"Relevant instructions:\n\n{rag_context}"})
+
     if image_path:
-        content = [
-            _image_content_block(image_path),
-            {"type": "text", "text": prompt},
-        ]
-    else:
-        content = prompt
+        content.append(_image_content_block(image_path))
+
+    content.append({"type": "text", "text": prompt})
 
     messages = []
     if system:
@@ -169,35 +297,44 @@ def query(
     payload: dict = {"messages": messages}
     if model:
         payload["model"] = model
-    if collection_ids:
+    if rag_backend == "owui" and collection_ids:
         payload["files"] = [{"type": "collection", "id": cid} for cid in collection_ids]
+
+    if rag_backend == "owui":
+        url, headers = f"{OWUI_URL}/api/chat/completions", _OWUI_HEADERS
+    else:
+        url, headers = f"{LITELLM_URL}/v1/chat/completions", _LITELLM_HEADERS
 
     t0 = time.time()
     try:
         r = requests.post(
-            f"{OWUI_URL}/api/chat/completions",
-            headers=_OWUI_HEADERS,
+            url,
+            headers=headers,
             json=payload,
             timeout=TIMEOUT,
         )
         r.raise_for_status()
         data = r.json()
         return {
-            "prompt":     prompt,
-            "image":      str(image_path) if image_path else None,
-            "model_used": data.get("model", model),
-            "response":   data["choices"][0]["message"]["content"],
-            "latency_s":  round(time.time() - t0, 2),
-            "error":      None,
+            "prompt":          prompt,
+            "image":           str(image_path) if image_path else None,
+            "reference_image": str(reference_image) if reference_image else None,
+            "rag_backend":     rag_backend,
+            "model_used":      data.get("model", model),
+            "response":        data["choices"][0]["message"]["content"],
+            "latency_s":       round(time.time() - t0, 2),
+            "error":           None,
         }
     except Exception as e:
         return {
-            "prompt":     prompt,
-            "image":      str(image_path) if image_path else None,
-            "model_used": model,
-            "response":   None,
-            "latency_s":  round(time.time() - t0, 2),
-            "error":      str(e),
+            "prompt":          prompt,
+            "image":           str(image_path) if image_path else None,
+            "reference_image": str(reference_image) if reference_image else None,
+            "rag_backend":     rag_backend,
+            "model_used":      model,
+            "response":        None,
+            "latency_s":       round(time.time() - t0, 2),
+            "error":           str(e),
         }
 
 
@@ -277,6 +414,13 @@ def batch_query_images(
     *,
     run_id: str | None = None,
     system: str = "",
+    reference_image: str | Path | None = None,
+    rag_backend: str = "local",
+    csv_path: str | Path | None = None,
+    top_k: int = 5,
+    method: str = "hybrid",
+    alpha: float = 0.5,
+    score_threshold: float = 0.35,
     collection_ids: list[str] | None = None,
     extensions: tuple[str, ...] = (".png", ".jpg", ".jpeg", ".webp"),
     delay: float = 1.0,
@@ -297,7 +441,15 @@ def batch_query_images(
                       so previous runs are preserved.
                       If None (default), outputs overwrite previous results.
     system          : Optional system prompt applied to all queries.
-    collection_ids  : Optional RAG collection UUIDs attached to every query.
+    reference_image : Optional path to a reference/example image sent before RAG context.
+    rag_backend     : "local" (default) — use csv_path with retrieve_chunks.
+                      "owui"            — delegate to OWUI via collection_ids.
+    csv_path        : Path to document_chunks.csv. Required when rag_backend="local".
+    top_k           : Number of chunks to retrieve from csv_path.
+    method          : Retrieval strategy — "hybrid" (default), "top_k", or "threshold".
+    alpha           : Hybrid only. Weight for vector scores (1-alpha to BM25).
+    score_threshold : Threshold only. Minimum cosine similarity to include a chunk.
+    collection_ids  : OWUI knowledge collection UUIDs. Required when rag_backend="owui".
     extensions      : Image file extensions to include.
     delay           : Seconds to sleep between API calls.
     verbose         : Print progress to stdout.
@@ -305,7 +457,7 @@ def batch_query_images(
     Returns
     -------
     List of result dicts, one per (model, plot_name, image) combination.
-    Each dict has keys: plot_name, image, model_used, response, latency_s, error.
+    Each dict has keys: plot_name, image, reference_image, model_used, response, latency_s, error.
     """
     image_root  = Path(image_root)
     output_root = Path(output_root)
@@ -332,6 +484,13 @@ def batch_query_images(
                 prompt,
                 model=model,
                 system=system,
+                reference_image=reference_image,
+                rag_backend=rag_backend,
+                csv_path=csv_path,
+                top_k=top_k,
+                method=method,
+                alpha=alpha,
+                score_threshold=score_threshold,
                 image_path=image_path,
                 collection_ids=collection_ids,
             )

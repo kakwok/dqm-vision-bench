@@ -44,3 +44,41 @@ their subsystem and source file:
   },
   ...
 ]
+```
+
+## RAG Details
+
+Retrieval-Augmented Generation (RAG) injects relevant shift instructions into each query so the model has the specific rules for the plot it is evaluating. The knowledge base is sourced from [archi](https://github.com/archi-physics/archi) and exported as `document_chunks.csv` and `documents.csv`.
+
+### Embedding model
+
+Chunks are embedded at ingestion time using `sentence-transformers/all-MiniLM-L6-v2` (via `langchain-huggingface`) with `normalize_embeddings=True`. The same model must be used at query time — mixing models produces vectors in incompatible spaces and makes similarity scores meaningless.
+
+The query embedding is computed once per call (~10 ms on CPU). Chunk embeddings are loaded from the CSV and cached in memory after the first call.
+
+### Query message structure
+
+Each query is assembled in four ordered parts:
+
+1. **Reference image** *(optional)* — a known-good example image shown before the instructions
+2. **RAG context** — the retrieved chunk text injected as `Relevant instructions: ...`
+3. **Input image** — the plot being evaluated
+4. **Prompt** — the text instruction
+
+### Retrieval methods
+
+Three strategies are available via the `method` parameter in `retrieve_chunks`, `query`, and `batch_query_images`:
+
+| `method` | Description | Key parameters |
+|---|---|---|
+| `"hybrid"` *(default)* | Combines BM25 keyword scores and vector cosine scores with a weighted sum, then returns the top `top_k` results. BM25 reliably catches exact plot names and thresholds; vector search catches paraphrased or conceptually related rules. | `top_k`, `alpha` |
+| `"top_k"` | Vector cosine similarity only; returns the `top_k` highest-scoring chunks. | `top_k` |
+| `"threshold"` | Vector cosine similarity only; returns all chunks scoring at or above `score_threshold`, capped at `top_k` to prevent context-window overflow. | `score_threshold`, `top_k` |
+
+### Parameter defaults and rationale
+
+| Parameter | Default | Rationale |
+|---|---|---|
+| `top_k` | `5` | OpenWebUI defaults to 3; 5 provides slightly more context without significantly increasing prompt length. |
+| `alpha` | `0.5` | Equal weight between vector and BM25. Tune toward lower values (more BM25) if exact plot-name matching is more important than semantic recall. |
+| `score_threshold` | `0.35` | Values below ~0.35 on `all-MiniLM-L6-v2` are typically noise. A threshold of 0.0 would return virtually all chunks. Tune based on observed score distributions for your corpus. |
