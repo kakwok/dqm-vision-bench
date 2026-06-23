@@ -32,6 +32,7 @@ import base64
 import os
 import time
 from pathlib import Path
+import json
 
 import requests
 from dotenv import load_dotenv
@@ -136,21 +137,6 @@ def query(
     image_path: str | Path | None = None,
     collection_ids: list[str] | None = None,
 ) -> dict:
-    """
-    Send a single query to OpenWebUI and return a result dict.
-
-    Parameters
-    ----------
-    prompt          : User message text.
-    model           : Model ID. Falls back to OWUI_MODEL env var, then server default.
-    system          : Optional system prompt.
-    image_path      : Optional path to an image file (requires a vision model).
-    collection_ids  : Optional list of RAG knowledge collection UUIDs.
-
-    Returns
-    -------
-    dict with keys: prompt, image, model_used, response, latency_s, error
-    """
     model = model or MODEL
 
     if image_path:
@@ -166,38 +152,80 @@ def query(
         messages.append({"role": "system", "content": system})
     messages.append({"role": "user", "content": content})
 
-    payload: dict = {"messages": messages}
+    payload: dict = {"messages": messages, "stream": True}  # <-- enable streaming
     if model:
         payload["model"] = model
     if collection_ids:
         payload["files"] = [{"type": "collection", "id": cid} for cid in collection_ids]
 
     t0 = time.time()
+    t_first_token = None
+    full_response = ""
+
     try:
-        r = requests.post(
+        with requests.post(
             f"{OWUI_URL}/api/chat/completions",
             headers=_OWUI_HEADERS,
+            # f"{LITELLM_URL}/v1/chat/completions",
+            # headers=_LITELLM_HEADERS,
             json=payload,
             timeout=TIMEOUT,
-        )
-        r.raise_for_status()
-        data = r.json()
+            stream=True,
+        ) as r:
+            r.raise_for_status()
+            model_used = model
+            for line in r.iter_lines():
+                if not line:
+                    continue
+                # CHANGE 1: skip non-data SSE lines (e.g. comments, metadata)
+                # before, t_first_token could be set on a non-data line,
+                # and chunk["choices"] would then crash on a line with no JSON.
+                if not line.startswith(b"data: "):
+                    continue
+                data = line[6:]
+                if data == b"[DONE]":
+                    break
+                # CHANGE 2: skip malformed/non-JSON chunks silently
+                try:
+                    chunk = json.loads(data)
+                except json.JSONDecodeError:
+                    continue
+                # CHANGE 3: set t_first_token only after a valid data chunk is parsed
+                # (previously was set before the startswith check, so non-data lines
+                # could trigger it prematurely)
+                if t_first_token is None:
+                    t_first_token = time.time()
+                model_used = chunk.get("model", model_used)
+                # CHANGE 4: guard against chunks with no "choices" key (e.g. metadata
+                # chunks) and chunks where "delta" has no "content" (e.g. final
+                # finish_reason chunk) — previously chunk["choices"][0] would KeyError
+                choices = chunk.get("choices", [])
+                if choices:
+                    delta = choices[0].get("delta", {}).get("content", "")
+                    full_response += delta
+
+        t_end = time.time()
+        ttft = round(t_first_token - t0, 2) if t_first_token else None
         return {
-            "prompt":     prompt,
-            "image":      str(image_path) if image_path else None,
-            "model_used": data.get("model", model),
-            "response":   data["choices"][0]["message"]["content"],
-            "latency_s":  round(time.time() - t0, 2),
-            "error":      None,
+            "prompt":              prompt,
+            "image":               str(image_path) if image_path else None,
+            "model_used":          model_used,
+            "response":            full_response,
+            "load_latency_s":      ttft,           # model load + prompt eval
+            "generation_latency_s": round(t_end - t_first_token, 2) if t_first_token else None,
+            "latency_s":           round(t_end - t0, 2),
+            "error":               None,
         }
     except Exception as e:
         return {
-            "prompt":     prompt,
-            "image":      str(image_path) if image_path else None,
-            "model_used": model,
-            "response":   None,
-            "latency_s":  round(time.time() - t0, 2),
-            "error":      str(e),
+            "prompt":              prompt,
+            "image":               str(image_path) if image_path else None,
+            "model_used":          model,
+            "response":            None,
+            "load_latency_s":      None,
+            "generation_latency_s": None,
+            "latency_s":           round(time.time() - t0, 2),
+            "error":               str(e),
         }
 
 
@@ -347,7 +375,10 @@ def batch_query_images(
                 f.write(f"Plot:     {plot_name}\n")
                 f.write(f"Image:    {result['image']}\n")
                 f.write(f"Run ID:   {run_id or '(overwrite)'}\n")
-                f.write(f"Latency:  {result['latency_s']}s\n")
+                #f.write(f"Latency:  {result['latency_s']}s\n")
+                f.write(f"Load latency:       {result['load_latency_s']}s\n")
+                f.write(f"Generation latency: {result['generation_latency_s']}s\n")
+                f.write(f"Total latency:      {result['latency_s']}s\n")
                 f.write(f"Prompt:   {result['prompt']}\n")
                 f.write("-" * 60 + "\n")
                 if result["error"]:
