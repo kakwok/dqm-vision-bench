@@ -30,7 +30,9 @@ Output layout (no run_id — overwrites):
 
 import ast
 import base64
+import json
 import os
+import re
 import time
 from pathlib import Path
 
@@ -134,12 +136,35 @@ def get_knowledge_map() -> dict[str, str]:
 _chunks_cache: dict[str, pd.DataFrame] = {}
 _bm25_cache:   dict[str, object] = {}
 
+_NOISE_RE = re.compile(
+    r"EditAttachPDF|Edit \| Attach|TWiki\? use Discourse|"
+    r"Copyright &|If you are experiencing TWiki instability",
+)
+_FILE_LISTING_RE = re.compile(
+    r"^\s*(png|jpg|gif)\s*$", re.MULTILINE,
+)
 
-def _load_chunks(csv_path: str | Path) -> tuple[pd.DataFrame, object]:
-    key = str(csv_path)
+
+def _is_noise(text: str) -> bool:
+    if len(text.strip()) < 50:
+        return True
+    if _NOISE_RE.search(text):
+        return True
+    lines = [ln.strip() for ln in text.strip().splitlines() if ln.strip()]
+    manage_lines = sum(1 for ln in lines if ln == "manage" or ln == "r1")
+    if manage_lines >= 3 and manage_lines / max(len(lines), 1) > 0.15:
+        return True
+    return False
+
+
+def _load_chunks(csv_path: str | Path, filter_noise: bool = True) -> tuple[pd.DataFrame, object]:
+    key = f"{csv_path}::{filter_noise}"
     if key not in _chunks_cache:
         from rank_bm25 import BM25Okapi
         df = pd.read_csv(csv_path)
+        if filter_noise:
+            keep = ~df["chunk_text"].apply(_is_noise)
+            df = df[keep].reset_index(drop=True)
         df["_emb"] = df["embedding"].apply(
             lambda s: np.array(ast.literal_eval(s), dtype=np.float32)
         )
@@ -161,6 +186,52 @@ def _embed_query(text: str) -> np.ndarray:
             encode_kwargs={"normalize_embeddings": True},
         )
     return np.array(_embedder.embed_query(text), dtype=np.float32)
+
+
+def _score_chunks(
+    query_text: str,
+    df: pd.DataFrame,
+    bm25: object,
+    method: str = "hybrid",
+    alpha: float = 0.5,
+    score_threshold: float = 0.35,
+    top_k: int = 5,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Return (top_idx, scores) arrays for the best-matching chunks."""
+    q = _embed_query(query_text)
+    emb_matrix = np.stack(df["_emb"].values)
+    q_norm = q / (np.linalg.norm(q) + 1e-10)
+    row_norms = np.linalg.norm(emb_matrix, axis=1, keepdims=True) + 1e-10
+    vec_scores = (emb_matrix / row_norms) @ q_norm
+
+    if method == "threshold":
+        mask = vec_scores >= score_threshold
+        idx = np.where(mask)[0]
+        top_idx = idx[np.argsort(vec_scores[idx])[::-1]][:top_k]
+        return top_idx, vec_scores[top_idx]
+
+    elif method == "top_k":
+        top_idx = np.argsort(vec_scores)[::-1][:top_k]
+        return top_idx, vec_scores[top_idx]
+
+    else:  # hybrid
+        tokens = query_text.lower().split()
+        raw_bm25 = np.array(bm25.get_scores(tokens), dtype=np.float32)
+        bm25_scores = raw_bm25 / (raw_bm25.max() + 1e-10)
+        scores = alpha * vec_scores + (1 - alpha) * bm25_scores
+        top_idx = np.argsort(scores)[::-1][:top_k]
+        return top_idx, scores[top_idx]
+
+
+def _chunk_source_label(row: pd.Series) -> str:
+    """Extract a human-readable source label from chunk metadata."""
+    try:
+        meta = json.loads(row["metadata"].replace("'", '"'))
+    except Exception:
+        return ""
+    title = meta.get("title", "")
+    title = re.sub(r"\s*<\s*CMS\s*<\s*TWiki\s*$", "", title).strip()
+    return title
 
 
 def retrieve_chunks(
@@ -190,30 +261,48 @@ def retrieve_chunks(
                        (0.35 is a reasonable floor for all-MiniLM-L6-v2).
     """
     df, bm25 = _load_chunks(csv_path)
+    top_idx, _ = _score_chunks(query_text, df, bm25, method, alpha, score_threshold, top_k)
 
-    q = _embed_query(query_text)
-    emb_matrix = np.stack(df["_emb"].values)
-    q_norm = q / (np.linalg.norm(q) + 1e-10)
-    row_norms = np.linalg.norm(emb_matrix, axis=1, keepdims=True) + 1e-10
-    vec_scores = (emb_matrix / row_norms) @ q_norm                          # (N,)
+    parts = []
+    for i in top_idx:
+        row = df.iloc[i]
+        label = _chunk_source_label(row)
+        header = f"[From: {label}]\n" if label else ""
+        parts.append(f"{header}{row['chunk_text']}")
+    return "\n\n---\n\n".join(parts)
 
-    if method == "threshold":
-        mask = vec_scores >= score_threshold
-        idx = np.where(mask)[0]
-        top_idx = idx[np.argsort(vec_scores[idx])[::-1]][:top_k]
 
-    elif method == "top_k":
-        top_idx = np.argsort(vec_scores)[::-1][:top_k]
+def retrieve_and_inspect(
+    query_text: str,
+    csv_path: str | Path = "document_chunks.csv",
+    top_k: int = 5,
+    method: str = "hybrid",
+    alpha: float = 0.5,
+    score_threshold: float = 0.35,
+) -> list[dict]:
+    """
+    Debug helper: retrieve chunks and return structured metadata for each.
 
-    else:  # hybrid
-        tokens = query_text.lower().split()
-        raw_bm25 = np.array(bm25.get_scores(tokens), dtype=np.float32)
-        bm25_scores = raw_bm25 / (raw_bm25.max() + 1e-10)
-        scores = alpha * vec_scores + (1 - alpha) * bm25_scores
-        top_idx = np.argsort(scores)[::-1][:top_k]
+    Returns a list of dicts with keys:
+        rank, chunk_index, document_id, source, score, text_preview, text_length
+    """
+    df, bm25 = _load_chunks(csv_path)
+    top_idx, top_scores = _score_chunks(query_text, df, bm25, method, alpha, score_threshold, top_k)
 
-    chunks = df.iloc[top_idx]["chunk_text"].tolist()
-    return "\n\n---\n\n".join(f"[Chunk {i+1}]\n{text}" for i, text in enumerate(chunks))
+    results = []
+    for rank, (i, score) in enumerate(zip(top_idx, top_scores), 1):
+        row = df.iloc[i]
+        text = row["chunk_text"]
+        results.append({
+            "rank": rank,
+            "chunk_index": int(row["chunk_index"]),
+            "document_id": int(row["document_id"]),
+            "source": _chunk_source_label(row),
+            "score": round(float(score), 4),
+            "text_preview": text[:200].replace("\n", " "),
+            "text_length": len(text),
+        })
+    return results
 
 
 # ---------------------------------------------------------------------------
