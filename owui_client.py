@@ -309,6 +309,7 @@ def batch_query_images(
     extensions: tuple[str, ...] = (".png", ".jpg", ".jpeg", ".webp"),
     delay: float = 1.0,
     verbose: bool = True,
+    prompt_map: "dict[Path, str] | None" = None
 ) -> list[dict]:
     """
     Iterate over all images in <image_root>/<plotName>/ × each model and
@@ -329,6 +330,9 @@ def batch_query_images(
     extensions      : Image file extensions to include.
     delay           : Seconds to sleep between API calls.
     verbose         : Print progress to stdout.
+    prompt_map      : Optional {image_path: prompt} dict for per-image prompts
+                      (e.g. built from run number → event type). Takes
+                      precedence over the static `prompt` argument.
 
     Returns
     -------
@@ -349,6 +353,7 @@ def batch_query_images(
     for model in models:
         for plot_name, image_path in pairs:
             n += 1
+            resolved_prompt = prompt_map[image_path] if prompt_map and image_path in prompt_map else prompt
             if verbose:
                 print(
                     f"[{n}/{total}] model={model}  "
@@ -357,7 +362,7 @@ def batch_query_images(
                 )
 
             result = query(
-                prompt,
+                resolved_prompt,
                 model=model,
                 system=system,
                 image_path=image_path,
