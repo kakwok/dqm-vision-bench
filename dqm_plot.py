@@ -3,7 +3,7 @@
 dqm_plot.py — Extract DQM histograms from ROOT file(s) and save as PNG.
 
 Designed to be imported by a Jupyter notebook (produce_images.ipynb) which
-supplies the file list and PLOT_CONFIG. Can also be run from the command line.
+supplies the file list and image config. Can also be run from the command line.
 
 CLI — single file:
     python dqm_plot.py \\
@@ -16,8 +16,10 @@ CLI — batch (uses PLOT_CONFIG defined in this file):
 
 Output structure:
     images/
-        <plotName>/
-            <plotName>_run<XXXXXX>.png
+        <subsystem>_<plotNumber>/
+            <subsystem>_<plotNumber>[_<subplot>]_run<XXXXXX>.png
+        ref/
+            <subsystem>_<plotNumber>[_<subplot>]_run<XXXXXX>.png  ← reference images
 """
 
 import argparse
@@ -188,6 +190,7 @@ def save_plot(
     outdir: str = "images",
     width: int = 900,
     height: int = 700,
+    folder: str | None = None,
 ) -> str:
     """
     Draw a ROOT histogram and save it as PNG.
@@ -195,17 +198,19 @@ def save_plot(
     Parameters
     ----------
     obj       : ROOT histogram object (already detached from file).
-    plot_name : Name used for the subdirectory and filename stem.
+    plot_name : Filename stem (e.g. 'L1T_11_ugmtMuonPt').
     run       : Run number string (will be zero-padded to 6 digits).
     outdir    : Top-level output directory.
     width     : Canvas width in pixels.
     height    : Canvas height in pixels.
+    folder    : Subdirectory name under outdir (e.g. 'L1T_11').
+                Defaults to plot_name when not supplied.
 
     Returns
     -------
     str : Path to the saved PNG.
     """
-    out_dir = os.path.join(outdir, plot_name)
+    out_dir = os.path.join(outdir, folder if folder is not None else plot_name)
     os.makedirs(out_dir, exist_ok=True)
     out_png = os.path.join(out_dir, f"{plot_name}_run{run.zfill(6)}.png")
 
@@ -237,7 +242,7 @@ def save_plot(
 
 def produce_images(
     file_patterns: list[str],
-    plot_config: dict[str, str],
+    plot_config: dict[str, str] | list[dict],
     outdir: str = "images",
     run_override: str | None = None,
     width: int = 900,
@@ -251,7 +256,10 @@ def produce_images(
     Parameters
     ----------
     file_patterns : List of file paths or glob patterns (local or XRootD).
-    plot_config   : Dict mapping plot_name → object path template with {run}.
+    plot_config   : Either:
+                    - dict[stem, root_path_template]   (legacy format)
+                    - list[ImageSpec dict]              (from build_image_config())
+                      Each dict must have keys: stem, folder, root_path.
     outdir        : Top-level output directory.
     run_override  : Force a specific run number for all files.
     width/height  : Canvas dimensions in pixels.
@@ -260,29 +268,36 @@ def produce_images(
     Returns
     -------
     List of result dicts with keys:
-        root_file, run, plot_name, out_png, error
+        root_file, run, plot_name, folder, out_png, error
     """
+    # Normalise both config formats to a list of {stem, folder, root_path}
+    if isinstance(plot_config, dict):
+        specs = [{"stem": k, "folder": k, "root_path": v}
+                 for k, v in plot_config.items()]
+    else:
+        specs = list(plot_config)
+
     files = expand_files(file_patterns)
     if not files:
         raise FileNotFoundError("No files found matching the provided patterns.")
-    if not plot_config:
+    if not specs:
         raise ValueError("plot_config is empty.")
 
-    total   = len(files) * len(plot_config)
+    total   = len(files) * len(specs)
     results = []
     n       = 0
 
     if verbose:
-        print(f"{len(files)} file(s) × {len(plot_config)} plot(s) = {total} total\n")
+        print(f"{len(files)} file(s) × {len(specs)} plot(s) = {total} total\n")
 
     for root_path in files:
         run = run_override or infer_run_number(root_path)
         if run is None:
             print(f"SKIP (no run number): {root_path}")
-            for plot_name in plot_config:
+            for spec in specs:
                 results.append({"root_file": root_path, "run": None,
-                                 "plot_name": plot_name, "out_png": None,
-                                 "error": "run number not found"})
+                                 "plot_name": spec["stem"], "folder": spec["folder"],
+                                 "out_png": None, "error": "run number not found"})
             continue
 
         run_display = run.lstrip("0") or "0"
@@ -293,38 +308,41 @@ def produce_images(
             tf = open_file(root_path)
         except OSError as e:
             print(f"  ERROR opening file: {e}")
-            for plot_name in plot_config:
+            for spec in specs:
                 results.append({"root_file": root_path, "run": run_display,
-                                 "plot_name": plot_name, "out_png": None,
-                                 "error": str(e)})
+                                 "plot_name": spec["stem"], "folder": spec["folder"],
+                                 "out_png": None, "error": str(e)})
             continue
 
-        for plot_name, obj_template in plot_config.items():
+        for spec in specs:
+            plot_name = spec["stem"]
+            folder    = spec["folder"]
             n += 1
-            obj_path = obj_template.format(run=run_display.zfill(6))
+            obj_path = spec["root_path"].format(run=run_display.zfill(6))
             obj = get_object(tf, obj_path)
 
             if obj is None:
                 if verbose:
                     print(f"  [{n}/{total}] SKIP {plot_name} — object not found")
                 results.append({"root_file": root_path, "run": run_display,
-                                 "plot_name": plot_name, "out_png": None,
-                                 "error": "object not found"})
+                                 "plot_name": plot_name, "folder": folder,
+                                 "out_png": None, "error": "object not found"})
                 continue
 
             obj.SetDirectory(0)
             try:
-                out_png = save_plot(obj, plot_name, run_display, outdir, width, height)
+                out_png = save_plot(obj, plot_name, run_display, outdir, width, height,
+                                    folder=folder)
                 if verbose:
                     print(f"  [{n}/{total}] {plot_name} → {out_png}")
                 results.append({"root_file": root_path, "run": run_display,
-                                 "plot_name": plot_name, "out_png": out_png,
-                                 "error": None})
+                                 "plot_name": plot_name, "folder": folder,
+                                 "out_png": out_png, "error": None})
             except Exception as e:
                 print(f"  [{n}/{total}] ERROR {plot_name}: {e}")
                 results.append({"root_file": root_path, "run": run_display,
-                                 "plot_name": plot_name, "out_png": None,
-                                 "error": str(e)})
+                                 "plot_name": plot_name, "folder": folder,
+                                 "out_png": None, "error": str(e)})
 
         tf.Close()
 

@@ -448,7 +448,7 @@ def _collect_images(
     """
     pairs: list[tuple[str, Path]] = []
 
-    subdirs = sorted(d for d in image_root.iterdir() if d.is_dir())
+    subdirs = sorted(d for d in image_root.iterdir() if d.is_dir() and d.name != "ref")
     if subdirs:
         for plot_dir in subdirs:
             plot_name = plot_dir.name
