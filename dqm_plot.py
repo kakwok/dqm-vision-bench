@@ -365,7 +365,11 @@ def _cli():
     )
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--batch", action="store_true",
-                      help="Batch mode: iterate files × PLOT_CONFIG.")
+                      help="Batch mode: iterate files × plots.")
+    mode.add_argument("--list-subsystems", action="store_true",
+                      help="Print available subsystem names and exit.")
+    mode.add_argument("--list-plots", metavar="SUBSYSTEM",
+                      help="Print image stems for SUBSYSTEM and exit.")
 
     parser.add_argument("root_file",   nargs="?",
                         help="[single] Path/URL to one ROOT file.")
@@ -373,17 +377,47 @@ def _cli():
                         help="[single] Internal histogram path.")
     parser.add_argument("--files", nargs="+", metavar="PATTERN",
                         help="[batch] File paths or glob patterns.")
+    parser.add_argument("--subsystem", metavar="NAME",
+                        help="[batch] Subsystem name from shift_layouts.json "
+                             "(e.g. L1T, Ecal). Uses built-in PLOT_CONFIG when omitted.")
+    parser.add_argument("--plot", metavar="NUMBER", nargs="+",
+                        help="[batch] One or more plot numbers to include (e.g. 11 or 05). "
+                             "Requires --subsystem. Omit to include all plots.")
     parser.add_argument("--outdir",  default="images")
     parser.add_argument("--run",     default=None)
     parser.add_argument("--width",   type=int, default=900)
     parser.add_argument("--height",  type=int, default=700)
     args = parser.parse_args()
 
+    if args.list_subsystems:
+        from shift_layout_helpers import list_subsystems
+        for s in list_subsystems():
+            print(s)
+        return
+
+    if args.list_plots:
+        from shift_layout_helpers import format_image_config
+        format_image_config(args.list_plots)
+        return
+
     if args.batch:
         if not args.files:
             parser.error("--batch requires --files")
+        if args.subsystem:
+            from shift_layout_helpers import build_image_config
+            plot_config = build_image_config(args.subsystem)
+            if args.plot:
+                keep = set(args.plot)
+                plot_config = [s for s in plot_config if s["plot_number"] in keep]
+                if not plot_config:
+                    parser.error(
+                        f"No plots found for --plot {args.plot} in subsystem '{args.subsystem}'.\n"
+                        f"Run --list-plots {args.subsystem} to see available plot numbers."
+                    )
+        else:
+            plot_config = PLOT_CONFIG
         produce_images(
-            args.files, PLOT_CONFIG,
+            args.files, plot_config,
             outdir=args.outdir, run_override=args.run,
             width=args.width, height=args.height,
         )
