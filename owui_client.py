@@ -122,6 +122,47 @@ def list_models(detail: bool = False) -> list:
     return models if detail else [m["id"] for m in models]
 
 
+_stem_map_cache: dict | None = None
+
+
+def _get_stem_map() -> dict:
+    global _stem_map_cache
+    if _stem_map_cache is None:
+        try:
+            from shift_layout_helpers import build_stem_map
+            _stem_map_cache = build_stem_map()
+        except Exception:
+            _stem_map_cache = {}
+    return _stem_map_cache
+
+
+def find_reference_image(image_path: str | Path, ref_dir: str | Path) -> Path | None:
+    """
+    Look up the reference image for *image_path* inside *ref_dir*.
+
+    Expected ref_dir layout:
+        <ref_dir>/<subsystem>/<folder>/<stem>[_run<XXXXXX>].png
+
+    Example:
+        image_path : images/Ecal_05_RecHitEnergy/Ecal_05_RecHitEnergy_grp0_run398185.png
+        ref_dir    : ref_images
+        returns    : ref_images/Ecal/Ecal_05_RecHitEnergy/Ecal_05_RecHitEnergy_grp0_run398185.png
+
+    Subsystem and folder are resolved via the shift_layout stem map.
+    Returns None if no matching file is found or the stem is not recognised.
+    """
+    stem = re.sub(r"_run\d+$", "", Path(image_path).stem)
+    ref_dir = Path(ref_dir)
+
+    info = _get_stem_map().get(stem)
+    if not info:
+        return None
+
+    subpath = ref_dir / info["subsystem"] / info["folder"]
+    matches = sorted(subpath.glob(f"{stem}_run*.png")) or sorted(subpath.glob(f"{stem}.png"))
+    return matches[0] if matches else None
+
+
 def get_knowledge_map() -> dict[str, str]:
     """Return {name: id} for all knowledge collections visible to this user."""
     r = requests.get(f"{OWUI_URL}/api/v1/knowledge/", headers=_OWUI_HEADERS, timeout=30)
@@ -504,6 +545,7 @@ def batch_query_images(
     run_id: str | None = None,
     system: str = "",
     reference_image: str | Path | None = None,
+    ref_dir: str | Path | None = None,
     rag_backend: str = "local",
     csv_path: str | Path | None = None,
     top_k: int = 5,
@@ -530,7 +572,11 @@ def batch_query_images(
                       so previous runs are preserved.
                       If None (default), outputs overwrite previous results.
     system          : Optional system prompt applied to all queries.
-    reference_image : Optional path to a reference/example image sent before RAG context.
+    reference_image : Optional single reference image sent for every query.
+                      Ignored when ref_dir is set.
+    ref_dir         : Optional directory of per-plot reference images (images/ref/).
+                      For each input image, find_reference_image() looks for a
+                      matching file by stem. Takes precedence over reference_image.
     rag_backend     : "local" (default) — use csv_path with retrieve_chunks.
                       "owui"            — delegate to OWUI via collection_ids.
     csv_path        : Path to document_chunks.csv. Required when rag_backend="local".
@@ -550,6 +596,7 @@ def batch_query_images(
     """
     image_root  = Path(image_root)
     output_root = Path(output_root)
+    ref_dir     = Path(ref_dir) if ref_dir else None
 
     pairs = _collect_images(image_root, extensions)
     if not pairs:
@@ -562,10 +609,18 @@ def batch_query_images(
     for model in models:
         for plot_name, image_path in pairs:
             n += 1
+
+            # Resolve reference image: per-image lookup takes precedence
+            if ref_dir is not None:
+                ref_img = find_reference_image(image_path, ref_dir)
+            else:
+                ref_img = Path(reference_image) if reference_image else None
+
             if verbose:
+                ref_label = ref_img.name if ref_img else "none"
                 print(
                     f"[{n}/{total}] model={model}  "
-                    f"plot={plot_name}  image={image_path.name} ...",
+                    f"plot={plot_name}  image={image_path.name}  ref={ref_label} ...",
                     end=" ", flush=True,
                 )
 
@@ -573,7 +628,7 @@ def batch_query_images(
                 prompt,
                 model=model,
                 system=system,
-                reference_image=reference_image,
+                reference_image=ref_img,
                 rag_backend=rag_backend,
                 csv_path=csv_path,
                 top_k=top_k,
