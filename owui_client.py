@@ -136,31 +136,35 @@ def _get_stem_map() -> dict:
     return _stem_map_cache
 
 
-def find_reference_image(image_path: str | Path, ref_dir: str | Path) -> Path | None:
+def find_reference_images(image_path: str | Path, ref_dir: str | Path) -> list[Path]:
     """
-    Look up the reference image for *image_path* inside *ref_dir*.
+    Return all reference images for *image_path* from *ref_dir*.
 
-    Expected ref_dir layout:
-        <ref_dir>/<subsystem>/<folder>/<stem>[_run<XXXXXX>].png
+    Looks up the plot's subsystem and folder via the shift_layout stem map, then
+    returns every .png whose name starts with the plot's base stem (grpN stripped).
+    Typical results: good, bad, cosmics variants — all sorted alphabetically.
 
-    Example:
-        image_path : images/Ecal_05_RecHitEnergy/Ecal_05_RecHitEnergy_grp0_run398185.png
-        ref_dir    : ref_images
-        returns    : ref_images/Ecal/Ecal_05_RecHitEnergy/Ecal_05_RecHitEnergy_grp0_run398185.png
-
-    Subsystem and folder are resolved via the shift_layout stem map.
-    Returns None if no matching file is found or the stem is not recognised.
+    Returns an empty list when the stem is unrecognised or the folder has no matches.
     """
     stem = re.sub(r"_run\d+$", "", Path(image_path).stem)
     ref_dir = Path(ref_dir)
 
     info = _get_stem_map().get(stem)
     if not info:
-        return None
+        return []
 
     subpath = ref_dir / info["subsystem"] / info["folder"]
-    matches = sorted(subpath.glob(f"{stem}_run*.png")) or sorted(subpath.glob(f"{stem}.png"))
-    return matches[0] if matches else None
+    if not subpath.exists():
+        return []
+
+    base_stem = re.sub(r"_grp\d+$", "", stem)
+    return sorted(subpath.glob(f"{base_stem}*.png"))
+
+
+def find_reference_image(image_path: str | Path, ref_dir: str | Path) -> Path | None:
+    """Return the first reference image for *image_path*, or None. See find_reference_images()."""
+    refs = find_reference_images(image_path, ref_dir)
+    return refs[0] if refs else None
 
 
 def get_knowledge_map() -> dict[str, str]:
@@ -355,7 +359,7 @@ def query(
     *,
     model: str = "",
     system: str = "",
-    reference_image: str | Path | None = None,
+    reference_images: "list[str | Path] | str | Path | None" = None,
     rag_backend: str = "local",
     csv_path: str | Path | None = None,
     top_k: int = 5,
@@ -369,30 +373,32 @@ def query(
     Send a single query to OpenWebUI and return a result dict.
 
     The user message is built in four ordered parts:
-      1. reference_image  — optional "good example" image shown before context
+      1. reference_images — zero or more reference images shown before context
       2. RAG context      — chunks from local CSV or OWUI knowledge collection
       3. image_path       — the input image to evaluate
       4. prompt           — the text instruction
 
     Parameters
     ----------
-    prompt          : User message text.
-    model           : Model ID. Falls back to OWUI_MODEL env var, then server default.
-    system          : Optional system prompt.
-    reference_image : Optional path to a reference/example image.
-    rag_backend     : "local" (default) — retrieve from csv_path using retrieve_chunks.
-                      "owui"            — delegate retrieval to OWUI via collection_ids.
-    csv_path        : Path to document_chunks.csv. Required when rag_backend="local".
-    top_k           : Max chunks to retrieve (used by "hybrid" and "top_k" methods).
-    method          : Retrieval strategy — "hybrid" (default), "top_k", or "threshold".
-    alpha           : Hybrid only. Weight for vector scores (1-alpha to BM25).
-    score_threshold : Threshold only. Minimum cosine similarity to include a chunk.
-    image_path      : Path to the input image to evaluate (requires a vision model).
-    collection_ids  : OWUI knowledge collection UUIDs. Required when rag_backend="owui".
+    prompt           : User message text.
+    model            : Model ID. Falls back to OWUI_MODEL env var, then server default.
+    system           : Optional system prompt.
+    reference_images : Optional reference image(s). Accepts a single path or a list of
+                       paths (e.g. good + bad examples). Each is prepended to the message
+                       before the RAG context and input image.
+    rag_backend      : "local" (default) — retrieve from csv_path using retrieve_chunks.
+                       "owui"            — delegate retrieval to OWUI via collection_ids.
+    csv_path         : Path to document_chunks.csv. Required when rag_backend="local".
+    top_k            : Max chunks to retrieve (used by "hybrid" and "top_k" methods).
+    method           : Retrieval strategy — "hybrid" (default), "top_k", or "threshold".
+    alpha            : Hybrid only. Weight for vector scores (1-alpha to BM25).
+    score_threshold  : Threshold only. Minimum cosine similarity to include a chunk.
+    image_path       : Path to the input image to evaluate (requires a vision model).
+    collection_ids   : OWUI knowledge collection UUIDs. Required when rag_backend="owui".
 
     Returns
     -------
-    dict with keys: prompt, image, reference_image, rag_backend, model_used, response, latency_s, error
+    dict with keys: prompt, image, reference_images, rag_backend, model_used, response, latency_s, error
     """
     if csv_path and collection_ids:
         raise ValueError(
@@ -402,10 +408,18 @@ def query(
 
     model = model or MODEL
 
+    # Normalise reference_images to a list of Path objects
+    if reference_images is None:
+        ref_list: list[Path] = []
+    elif isinstance(reference_images, (str, Path)):
+        ref_list = [Path(reference_images)]
+    else:
+        ref_list = [Path(r) for r in reference_images]
+
     content = []
 
-    if reference_image:
-        content.append(_image_content_block(reference_image))
+    for ref in ref_list:
+        content.append(_image_content_block(ref))
 
     if rag_backend == "local" and csv_path:
         rag_context = retrieve_chunks(
@@ -446,25 +460,25 @@ def query(
         r.raise_for_status()
         data = r.json()
         return {
-            "prompt":          prompt,
-            "image":           str(image_path) if image_path else None,
-            "reference_image": str(reference_image) if reference_image else None,
-            "rag_backend":     rag_backend,
-            "model_used":      data.get("model", model),
-            "response":        data["choices"][0]["message"]["content"],
-            "latency_s":       round(time.time() - t0, 2),
-            "error":           None,
+            "prompt":           prompt,
+            "image":            str(image_path) if image_path else None,
+            "reference_images": [str(r) for r in ref_list],
+            "rag_backend":      rag_backend,
+            "model_used":       data.get("model", model),
+            "response":         data["choices"][0]["message"]["content"],
+            "latency_s":        round(time.time() - t0, 2),
+            "error":            None,
         }
     except Exception as e:
         return {
-            "prompt":          prompt,
-            "image":           str(image_path) if image_path else None,
-            "reference_image": str(reference_image) if reference_image else None,
-            "rag_backend":     rag_backend,
-            "model_used":      model,
-            "response":        None,
-            "latency_s":       round(time.time() - t0, 2),
-            "error":           str(e),
+            "prompt":           prompt,
+            "image":            str(image_path) if image_path else None,
+            "reference_images": [str(r) for r in ref_list],
+            "rag_backend":      rag_backend,
+            "model_used":       model,
+            "response":         None,
+            "latency_s":        round(time.time() - t0, 2),
+            "error":            str(e),
         }
 
 
@@ -544,7 +558,6 @@ def batch_query_images(
     *,
     run_id: str | None = None,
     system: str = "",
-    reference_image: str | Path | None = None,
     ref_dir: str | Path | None = None,
     rag_backend: str = "local",
     csv_path: str | Path | None = None,
@@ -572,11 +585,9 @@ def batch_query_images(
                       so previous runs are preserved.
                       If None (default), outputs overwrite previous results.
     system          : Optional system prompt applied to all queries.
-    reference_image : Optional single reference image sent for every query.
-                      Ignored when ref_dir is set.
-    ref_dir         : Optional directory of per-plot reference images (images/ref/).
-                      For each input image, find_reference_image() looks for a
-                      matching file by stem. Takes precedence over reference_image.
+    ref_dir         : Optional ref_images root. For each input image,
+                      find_reference_images() returns all matching reference files
+                      (good, bad, cosmics variants). Leave None to send no references.
     rag_backend     : "local" (default) — use csv_path with retrieve_chunks.
                       "owui"            — delegate to OWUI via collection_ids.
     csv_path        : Path to document_chunks.csv. Required when rag_backend="local".
@@ -592,7 +603,7 @@ def batch_query_images(
     Returns
     -------
     List of result dicts, one per (model, plot_name, image) combination.
-    Each dict has keys: plot_name, image, reference_image, model_used, response, latency_s, error.
+    Each dict has keys: plot_name, image, reference_images, model_used, response, latency_s, error.
     """
     image_root  = Path(image_root)
     output_root = Path(output_root)
@@ -610,17 +621,13 @@ def batch_query_images(
         for plot_name, image_path in pairs:
             n += 1
 
-            # Resolve reference image: per-image lookup takes precedence
-            if ref_dir is not None:
-                ref_img = find_reference_image(image_path, ref_dir)
-            else:
-                ref_img = Path(reference_image) if reference_image else None
+            refs = find_reference_images(image_path, ref_dir) if ref_dir is not None else []
 
             if verbose:
-                ref_label = ref_img.name if ref_img else "none"
+                ref_label = ", ".join(r.name for r in refs) if refs else "none"
                 print(
                     f"[{n}/{total}] model={model}  "
-                    f"plot={plot_name}  image={image_path.name}  ref={ref_label} ...",
+                    f"plot={plot_name}  image={image_path.name}  refs=[{ref_label}] ...",
                     end=" ", flush=True,
                 )
 
@@ -628,7 +635,7 @@ def batch_query_images(
                 prompt,
                 model=model,
                 system=system,
-                reference_image=ref_img,
+                reference_images=refs,
                 rag_backend=rag_backend,
                 csv_path=csv_path,
                 top_k=top_k,
@@ -646,12 +653,14 @@ def batch_query_images(
             out_file = resolve_output_file(out_dir, image_path, model)
 
             with open(out_file, "w") as f:
-                f.write(f"Model:    {result['model_used']}\n")
-                f.write(f"Plot:     {plot_name}\n")
-                f.write(f"Image:    {result['image']}\n")
-                f.write(f"Run ID:   {run_id or '(overwrite)'}\n")
-                f.write(f"Latency:  {result['latency_s']}s\n")
-                f.write(f"Prompt:   {result['prompt']}\n")
+                f.write(f"Model:      {result['model_used']}\n")
+                f.write(f"Plot:       {plot_name}\n")
+                f.write(f"Image:      {result['image']}\n")
+                refs_str = ", ".join(Path(r).name for r in result["reference_images"])
+                f.write(f"References: {refs_str or '(none)'}\n")
+                f.write(f"Run ID:     {run_id or '(overwrite)'}\n")
+                f.write(f"Latency:    {result['latency_s']}s\n")
+                f.write(f"Prompt:     {result['prompt']}\n")
                 f.write("-" * 60 + "\n")
                 if result["error"]:
                     f.write(f"ERROR: {result['error']}\n")
