@@ -351,6 +351,51 @@ def retrieve_and_inspect(
 
 
 # ---------------------------------------------------------------------------
+# YAML instruction store lookup
+# ---------------------------------------------------------------------------
+
+_yaml_cache: dict[str, dict] = {}
+
+def lookup_instruction(stem: str, store_dir: str | Path = "plot_instructions") -> str:
+    """
+    Return the instruction text for a plot stem from plot_instructions/<subsystem>.yaml.
+
+    Renders: description + quality_criteria + any non-expired known_issues.
+    Returns empty string if the YAML file or the stem entry does not exist.
+    """
+    subsystem = stem.split("_")[0]
+    yaml_path = Path(store_dir) / f"{subsystem}.yaml"
+    if not yaml_path.exists():
+        return ""
+
+    cache_key = str(yaml_path.resolve())
+    if cache_key not in _yaml_cache:
+        import yaml
+        with open(yaml_path, encoding="utf-8") as f:
+            _yaml_cache[cache_key] = yaml.safe_load(f)
+
+    entry = _yaml_cache.get(cache_key, {}).get("plots", {}).get(stem)
+    if not entry:
+        return ""
+
+    from datetime import date
+    today = date.today().isoformat()
+
+    parts: list[str] = []
+    if entry.get("description"):
+        parts.append(entry["description"].strip())
+    if entry.get("quality_criteria"):
+        parts.append(entry["quality_criteria"].strip())
+    for issue in entry.get("known_issues", []):
+        expires = issue.get("expires")
+        if expires and str(expires) < today:
+            continue
+        parts.append(f"Known issue: {issue['text']}")
+
+    return "\n\n".join(parts)
+
+
+# ---------------------------------------------------------------------------
 # Core query
 # ---------------------------------------------------------------------------
 
@@ -422,11 +467,20 @@ def query(
         content.append(_image_content_block(ref))
 
     if rag_backend == "local" and csv_path:
+        # Use the plot folder name as the RAG query when available — more specific
+        # than the user prompt (which may be empty or generic).
+        rag_query = Path(image_path).parent.name if image_path else prompt
         rag_context = retrieve_chunks(
-            prompt, csv_path=csv_path, top_k=top_k,
+            rag_query, csv_path=csv_path, top_k=top_k,
             method=method, alpha=alpha, score_threshold=score_threshold,
         )
         content.append({"type": "text", "text": f"Relevant instructions:\n\n{rag_context}"})
+
+    elif rag_backend == "yaml" and image_path:
+        stem = Path(image_path).parent.name
+        instruction = lookup_instruction(stem)
+        if instruction:
+            content.append({"type": "text", "text": f"Instructions:\n\n{instruction}"})
 
     if image_path:
         content.append(_image_content_block(image_path))
@@ -567,6 +621,7 @@ def batch_query_images(
     score_threshold: float = 0.35,
     collection_ids: list[str] | None = None,
     extensions: tuple[str, ...] = (".png", ".jpg", ".jpeg", ".webp"),
+    pairs: "list[tuple[str, Path]] | None" = None,
     delay: float = 1.0,
     verbose: bool = True,
 ) -> list[dict]:
@@ -597,6 +652,9 @@ def batch_query_images(
     score_threshold : Threshold only. Minimum cosine similarity to include a chunk.
     collection_ids  : OWUI knowledge collection UUIDs. Required when rag_backend="owui".
     extensions      : Image file extensions to include.
+    pairs           : Pre-built (plot_name, image_path) pairs. When provided,
+                      image_root is not scanned — use this to pass a pre-filtered
+                      list from the notebook. None (default) collects from image_root.
     delay           : Seconds to sleep between API calls.
     verbose         : Print progress to stdout.
 
@@ -609,7 +667,8 @@ def batch_query_images(
     output_root = Path(output_root)
     ref_dir     = Path(ref_dir) if ref_dir else None
 
-    pairs = _collect_images(image_root, extensions)
+    if pairs is None:
+        pairs = _collect_images(image_root, extensions)
     if not pairs:
         raise FileNotFoundError(f"No images found under {image_root}")
 
