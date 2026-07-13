@@ -48,7 +48,7 @@ OWUI_URL = os.environ.get("OWUI_URL", "https://openwebui.fnal.gov/").rstrip("/")
 LITELLM_API_KEY = os.environ.get("LITELLM_API_KEY", "")
 LITELLM_URL     = os.environ.get("LITELLM_URL", "").rstrip("/")
 MODEL    = os.environ.get("OWUI_MODEL", "")
-TIMEOUT  = int(os.environ.get("OWUI_TIMEOUT", "120"))
+TIMEOUT  = int(os.environ.get("OWUI_TIMEOUT", "400"))
 
 if not OWUI_API_KEY:
     raise EnvironmentError("OWUI_API_KEY not set -  needed for knowledge/RAG access.")
@@ -136,6 +136,7 @@ def query(
     system: str = "",
     image_path: str | Path | None = None,
     collection_ids: list[str] | None = None,
+    no_think: bool = False,
 ) -> dict:
     model = model or MODEL
 
@@ -153,8 +154,15 @@ def query(
     messages.append({"role": "user", "content": content})
 
     payload: dict = {"messages": messages, "stream": True}  # <-- enable streaming
+
+    if no_think:
+        prompt = f"{prompt}\n/no_think"
+        if system:
+            system = f"{system}\n/no_think"
+
     if model:
         payload["model"] = model
+        
     if collection_ids:
         payload["files"] = [{"type": "collection", "id": cid} for cid in collection_ids]
 
@@ -177,28 +185,19 @@ def query(
             for line in r.iter_lines():
                 if not line:
                     continue
-                # CHANGE 1: skip non-data SSE lines (e.g. comments, metadata)
-                # before, t_first_token could be set on a non-data line,
-                # and chunk["choices"] would then crash on a line with no JSON.
                 if not line.startswith(b"data: "):
                     continue
                 data = line[6:]
                 if data == b"[DONE]":
                     break
-                # CHANGE 2: skip malformed/non-JSON chunks silently
                 try:
                     chunk = json.loads(data)
+                    # print(chunk)
                 except json.JSONDecodeError:
                     continue
-                # CHANGE 3: set t_first_token only after a valid data chunk is parsed
-                # (previously was set before the startswith check, so non-data lines
-                # could trigger it prematurely)
                 if t_first_token is None:
                     t_first_token = time.time()
                 model_used = chunk.get("model", model_used)
-                # CHANGE 4: guard against chunks with no "choices" key (e.g. metadata
-                # chunks) and chunks where "delta" has no "content" (e.g. final
-                # finish_reason chunk) — previously chunk["choices"][0] would KeyError
                 choices = chunk.get("choices", [])
                 if choices:
                     delta = choices[0].get("delta", {}).get("content", "")
