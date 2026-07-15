@@ -11,6 +11,7 @@ pandas = "*"
 requests = "*"
 python-dotenv = "*"
 sentence-transformers = "*"
+pyyaml = "*"
 
 [pypi-dependencies]
 rank-bm25 = "*"
