@@ -1,6 +1,37 @@
 # dqm-vision-bench
 Benchmarking vision-language models on CMS DQM plots
 
+## Setup
+
+### Notebook output stripping (nbstripout)
+
+Jupyter autosave writes cell outputs and execution counts back into `.ipynb` files,
+making them perpetually dirty in git. `nbstripout` strips outputs before staging so
+only source changes are committed.
+
+**First time on a new machine (or the repo's first setup) — also creates `.gitattributes`:**
+
+```bash
+pip install nbstripout
+nbstripout --install --attributes .gitattributes
+git add .gitattributes
+git add *.ipynb      # apply filter to any notebooks already dirtied by Jupyter
+```
+
+Commit `.gitattributes` so every clone picks up the filter mapping automatically.
+
+**On each subsequent clone (after `.gitattributes` has been committed and pulled):**
+
+```bash
+pip install nbstripout
+nbstripout --install  # registers the filter in .git/config; .gitattributes already present
+git add *.ipynb       # fix notebooks already dirtied before the filter was active
+```
+
+> **Why two commands?** `.gitattributes` tells git *which* files to filter (committed,
+> shared across clones). `nbstripout --install` tells git *how* to run the filter
+> (written to `.git/config`, local to each clone). Both are needed on every machine.
+
 ## Shift Workspace Plot Index
  The CMS Online DQM GUI organises its **"00 Shift"** workspace through Python layout
 files (`shift_*_layout.py`) that map human-readable titles to ROOT histogram paths
