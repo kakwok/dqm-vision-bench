@@ -432,6 +432,10 @@ def pre_draw_hcal(canvas, obj, path: str) -> str | None:
             _int_palette(_HCAL_STATUS_COLORS)
             n = len(_HCAL_CONTOUR_BOUNDS) - 1
             obj.SetContour(n, _HCAL_CONTOUR_BOUNDS)
+            first = obj.FindFirstBinAbove(0, 1)
+            last  = obj.FindLastBinAbove(0, 1)
+            if first > 0 and last > 0:
+                obj.GetXaxis().SetRange(first, last)
 
         return draw_opt
 
