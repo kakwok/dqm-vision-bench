@@ -40,25 +40,29 @@ def report_summary_map_palette(obj) -> None:
 
 # Lazy-built palettes
 _ecal_quality_palette: array.array | None = None
+_ecal_tcolor_refs: list = []  # Keep Python refs so ROOT TColor objects aren't GC'd
 
 
 def _ecal_quality_colors() -> array.array:
-    global _ecal_quality_palette
+    """7-color discrete palette for ECAL quality flag maps (integer values 0–6)."""
+    global _ecal_quality_palette, _ecal_tcolor_refs
     if _ecal_quality_palette is not None:
         return _ecal_quality_palette
     rgb = [
-        (1.00, 0.00, 0.00),
-        (0.00, 1.00, 0.00),
-        (1.00, 0.96, 0.00),
-        (0.50, 0.00, 0.00),
-        (0.00, 1.00, 0.00),
-        (0.80, 0.80, 0.00),
-        (1.00, 1.00, 1.00),
+        (1.00, 0.00, 0.00),  # 0 → red
+        (0.00, 1.00, 0.00),  # 1 → green (GOOD)
+        (1.00, 0.96, 0.00),  # 2 → yellow
+        (0.50, 0.00, 0.00),  # 3 → dark red
+        (0.00, 1.00, 0.00),  # 4 → green
+        (0.80, 0.80, 0.00),  # 5 → dark yellow
+        (1.00, 1.00, 1.00),  # 6 → white
     ]
     idxs: list[int] = []
     for r, g, b in rgb:
         idx = ROOT.TColor.GetFreeColorIndex()
-        ROOT.TColor(idx, r, g, b)
+        tc  = ROOT.TColor(idx, r, g, b)
+        ROOT.SetOwnership(tc, False)  # Transfer ownership to ROOT; prevents C++ delete on Python GC
+        _ecal_tcolor_refs.append(tc)  # Keep Python ref anyway as a safety net
         idxs.append(idx)
     _ecal_quality_palette = array.array('i', idxs)
     return _ecal_quality_palette
@@ -89,6 +93,8 @@ def pre_draw_ecal(canvas, obj, path: str) -> str | None:
             obj.SetMaximum(7.0)
             p = _ecal_quality_colors()
             ROOT.gStyle.SetPalette(len(p), p)
+            ROOT.gStyle.SetNumberContours(7)  # override style_canvas()'s 255
+            obj.SetContour(7)                  # one bin per quality flag 0-6
             draw_opt = "COL"
         elif "summarymap" in name:
             report_summary_map_palette(obj)
@@ -136,7 +142,39 @@ def pre_draw_ecal(canvas, obj, path: str) -> str | None:
 
 
 def post_draw_ecal(canvas, obj, path: str) -> None:
-    pass  # Geometry overlays (SM labels, EE sector lines) require external lookup tables
+    if "EcalBarrel" not in path:
+        return
+    name = path.lower()
+    if not any(k in name for k in ("quality", "global summary", "status summary", "summarymap")):
+        return
+    cls = obj.ClassName()
+    if not cls.startswith(("TH2", "TProfile2D")):
+        return
+
+    ymin = obj.GetYaxis().GetXmin()
+    ymax = obj.GetYaxis().GetXmax()
+    xmin = obj.GetXaxis().GetXmin()
+    xmax = obj.GetXaxis().GetXmax()
+
+    # 17 vertical lines marking the 18 SM phi boundaries (every 20 iphi)
+    line = ROOT.TLine()
+    line.SetLineColor(ROOT.kBlack)
+    line.SetLineWidth(1)
+    for i in range(1, 18):
+        line.DrawLine(i * 20, ymin, i * 20, ymax)
+    # Horizontal separator between EB+ and EB- (ieta = 0)
+    line.DrawLine(xmin, 0, xmax, 0)
+
+    # SM number labels: "+NN" on EB+ side, "-NN" on EB- side
+    t = ROOT.TLatex()
+    t.SetTextSize(0.035)
+    t.SetTextAlign(22)  # centre-centre
+    y_pos  =  ymax * 0.65  # ~+55 for the standard -85/+85 axis
+    y_neg  =  ymin * 0.65  # ~-55
+    for i in range(18):
+        iphi_c = 10 + i * 20  # SM phi centres at 10, 30, 50, ..., 350
+        t.DrawLatex(iphi_c, y_pos, f"+{i+1:02d}")
+        t.DrawLatex(iphi_c, y_neg, f"-{i+1:02d}")
 
 
 # ---------------------------------------------------------------------------
