@@ -35,11 +35,15 @@ try:
     ROOT.gROOT.SetBatch(True)
     ROOT.gErrorIgnoreLevel = ROOT.kWarning
 except ImportError:
-    # Raise instead of sys.exit() so notebook import fails gracefully
     raise ImportError(
         "PyROOT not available. "
         "Source a CMSSW environment or activate a conda env with ROOT."
     )
+
+try:
+    from render_plugins import get_plugin as _get_render_plugin
+except Exception:
+    _get_render_plugin = None  # type: ignore[assignment]
 
 # ==============================================================================
 # Default PLOT_CONFIG — overridden by the notebook at runtime.
@@ -152,7 +156,47 @@ def get_object(tf: ROOT.TFile, obj_path: str):
     return obj
 
 
-def style_canvas(canvas: ROOT.TCanvas):
+# Named canvas styles.  Each entry overrides only the keys it cares about;
+# unset keys fall back to the "default" values below.
+PLOT_STYLES: dict[str, dict] = {
+    "default": {
+        "width":          900,
+        "height":         700,
+        "top_margin":    0.08,
+        "bottom_margin": 0.12,
+        "left_margin":   0.14,
+        "right_margin":  0.14,
+    },
+    # ECAL Barrel: iphi 0-360 × ieta -85..+85  →  wide canvas
+    "ecal_barrel": {
+        "width":          1400,
+        "height":          600,
+        "top_margin":    0.08,
+        "bottom_margin": 0.14,
+        "left_margin":   0.08,
+        "right_margin":  0.14,
+    },
+    # ECAL Endcap: ix 0-100 × iy 0-100 (donut)  →  slightly taller
+    "ecal_endcap": {
+        "width":          1000,
+        "height":          800,
+        "top_margin":    0.08,
+        "bottom_margin": 0.12,
+        "left_margin":   0.10,
+        "right_margin":  0.14,
+    },
+}
+
+def _resolve_style(style: str | None) -> dict:
+    """Return merged style dict: default values overridden by the named style."""
+    base = dict(PLOT_STYLES["default"])
+    if style and style in PLOT_STYLES:
+        base.update(PLOT_STYLES[style])
+    return base
+
+
+def style_canvas(canvas: ROOT.TCanvas, params: dict | None = None):
+    p = params or PLOT_STYLES["default"]
     ROOT.gStyle.SetPalette(ROOT.kRainBow)
     ROOT.gStyle.SetNumberContours(255)
     ROOT.gStyle.SetFrameBorderMode(0)
@@ -162,10 +206,10 @@ def style_canvas(canvas: ROOT.TCanvas):
     ROOT.gStyle.SetCanvasColor(0)
     ROOT.gStyle.SetTitleFillColor(0)
     ROOT.gStyle.SetTitleBorderSize(0)
-    ROOT.gStyle.SetPadTopMargin(0.08)
-    ROOT.gStyle.SetPadBottomMargin(0.12)
-    ROOT.gStyle.SetPadLeftMargin(0.14)
-    ROOT.gStyle.SetPadRightMargin(0.14)
+    ROOT.gStyle.SetPadTopMargin(p["top_margin"])
+    ROOT.gStyle.SetPadBottomMargin(p["bottom_margin"])
+    ROOT.gStyle.SetPadLeftMargin(p["left_margin"])
+    ROOT.gStyle.SetPadRightMargin(p["right_margin"])
     canvas.SetFillColor(0)
     canvas.SetBorderMode(0)
 
@@ -191,6 +235,8 @@ def save_plot(
     width: int = 900,
     height: int = 700,
     folder: str | None = None,
+    style: str | None = None,
+    root_path: str | None = None,
 ) -> str:
     """
     Draw a ROOT histogram and save it as PNG.
@@ -201,34 +247,54 @@ def save_plot(
     plot_name : Filename stem (e.g. 'L1T_11_ugmtMuonPt').
     run       : Run number string (will be zero-padded to 6 digits).
     outdir    : Top-level output directory.
-    width     : Canvas width in pixels.
-    height    : Canvas height in pixels.
-    folder    : Subdirectory name under outdir (e.g. 'L1T_11').
-                Defaults to plot_name when not supplied.
+    width     : Canvas width in pixels.  Overridden by style when style is set.
+    height    : Canvas height in pixels. Overridden by style when style is set.
+    folder    : Subdirectory name under outdir. Defaults to plot_name.
+    style     : Named style from PLOT_STYLES (e.g. 'ecal_barrel'). Overrides
+                width/height/margins. None uses the default style.
+    root_path : Internal ROOT object path (used to select a render plugin).
 
     Returns
     -------
     str : Path to the saved PNG.
     """
+    params = _resolve_style(style)
+    w = params["width"]
+    h = params["height"]
+
     out_dir = os.path.join(outdir, folder if folder is not None else plot_name)
     os.makedirs(out_dir, exist_ok=True)
     out_png = os.path.join(out_dir, f"{plot_name}_run{run.zfill(6)}.png")
 
-    canvas = ROOT.TCanvas("c1", plot_name, width, height)
-    style_canvas(canvas)
+    canvas = ROOT.TCanvas("c1", plot_name, w, h)
+    style_canvas(canvas, params)
 
-    draw_opt = draw_option(obj)
-    ROOT.gStyle.SetOptStat(10 if draw_opt in ("COLZ", "BOX") else 1111)
+    # Render plugin — pre-draw (may override draw option)
+    plugin = _get_render_plugin(root_path) if (_get_render_plugin and root_path) else None
+    plugin_draw_opt: str | None = None
+    if plugin and plugin[0]:
+        plugin_draw_opt = plugin[0](canvas, obj, root_path)
+
+    draw_opt = plugin_draw_opt if plugin_draw_opt is not None else draw_option(obj)
+
+    draw_opt_up = draw_opt.upper()
+    is_2d_draw  = any(s in draw_opt_up for s in ("COL", "BOX", "LEGO"))
+    ROOT.gStyle.SetOptStat(10 if is_2d_draw else 1111)
 
     obj.Draw(draw_opt)
     obj.GetXaxis().SetTitleSize(0.045)
     obj.GetYaxis().SetTitleSize(0.045)
     obj.GetXaxis().SetLabelSize(0.035)
     obj.GetYaxis().SetLabelSize(0.035)
-    if draw_opt == "COLZ":
+    if "COLZ" in draw_opt_up:
         obj.GetZaxis().SetTitleSize(0.040)
         obj.GetZaxis().SetLabelSize(0.030)
-        ROOT.gPad.SetRightMargin(0.18)
+        if not plugin:
+            ROOT.gPad.SetRightMargin(params["right_margin"] + 0.04)
+
+    # Render plugin — post-draw (overlays drawn before canvas.Update)
+    if plugin and plugin[1]:
+        plugin[1](canvas, obj, root_path)
 
     canvas.Update()
     canvas.SaveAs(out_png)
@@ -331,8 +397,9 @@ def produce_images(
 
             obj.SetDirectory(0)
             try:
-                out_png = save_plot(obj, plot_name, run_display, outdir, width, height,
-                                    folder=folder)
+                out_png = save_plot(obj, plot_name, run_display, outdir,
+                                    folder=folder, style=spec.get("style"),
+                                    root_path=obj_path)
                 if verbose:
                     print(f"  [{n}/{total}] {plot_name} → {out_png}")
                 results.append({"root_file": root_path, "run": run_display,

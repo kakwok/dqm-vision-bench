@@ -296,6 +296,7 @@ def build_image_config(subsystem: str) -> list[dict]:
                 "subsystem":   subsystem,
                 "plot_number": numbers[i],
                 "subplot":     subplots[i],
+                "style":       plot.get("style"),
             })
         return result
 

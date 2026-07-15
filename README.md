@@ -116,6 +116,20 @@ images/
 
 4. **Run `produce_images()`** — iterates over all resolved files × all configured plots and writes PNGs to `OUTDIR` (default `images/`).
 
+### CLI usage
+
+`dqm_plot.py` can also be run directly from the command line (requires ROOT/CMSSW environment):
+
+```bash
+# Produce specific plots for one or more subsystems
+python3 dqm_plot.py --batch \
+    --files '/eos/cms/store/group/comm_dqm/DQMGUI_data/Run2024/.../*.root' \
+    --subsystem L1T --plot 08 09 24 \
+    --outdir images
+```
+
+Use `--plot` to select individual plot numbers within a subsystem. Omit `--plot` to produce all plots for that subsystem. Run `--list-plots <SUBSYSTEM>` to see available plot numbers.
+
 ### Key files
 
 | File | Purpose |
