@@ -38,34 +38,17 @@ def report_summary_map_palette(obj) -> None:
     obj.SetMaximum(1.0)
 
 
-# Lazy-built palettes
-_ecal_quality_palette: array.array | None = None
-_ecal_tcolor_refs: list = []  # Keep Python refs so ROOT TColor objects aren't GC'd
-
-
-def _ecal_quality_colors() -> array.array:
-    """7-color discrete palette for ECAL quality flag maps (integer values 0–6)."""
-    global _ecal_quality_palette, _ecal_tcolor_refs
-    if _ecal_quality_palette is not None:
-        return _ecal_quality_palette
-    rgb = [
-        (1.00, 0.00, 0.00),  # 0 → red
-        (0.00, 1.00, 0.00),  # 1 → green (GOOD)
-        (1.00, 0.96, 0.00),  # 2 → yellow
-        (0.50, 0.00, 0.00),  # 3 → dark red
-        (0.00, 1.00, 0.00),  # 4 → green
-        (0.80, 0.80, 0.00),  # 5 → dark yellow
-        (1.00, 1.00, 1.00),  # 6 → white
-    ]
-    idxs: list[int] = []
-    for r, g, b in rgb:
-        idx = ROOT.TColor.GetFreeColorIndex()
-        tc  = ROOT.TColor(idx, r, g, b)
-        ROOT.SetOwnership(tc, False)  # Transfer ownership to ROOT; prevents C++ delete on Python GC
-        _ecal_tcolor_refs.append(tc)  # Keep Python ref anyway as a safety net
-        idxs.append(idx)
-    _ecal_quality_palette = array.array('i', idxs)
-    return _ecal_quality_palette
+# 7-color discrete palette for ECAL quality flag maps (values 0–6).
+# Uses ROOT built-in color constants — no TColor allocation, no GC risk.
+_ECAL_QUALITY_COLORS = array.array('i', [
+    ROOT.kRed,     # 0 → bad / no data
+    ROOT.kGreen,   # 1 → GOOD
+    ROOT.kYellow,  # 2 → warning
+    ROOT.kRed + 2, # 3 → dark red variant
+    ROOT.kGreen,   # 4 → GOOD (same as flag 1)
+    ROOT.kOrange,  # 5 → orange / dark yellow
+    ROOT.kWhite,   # 6 → empty
+])
 
 
 # ---------------------------------------------------------------------------
@@ -91,8 +74,7 @@ def pre_draw_ecal(canvas, obj, path: str) -> str | None:
         if any(k in name for k in ("quality", "global summary", "status summary")):
             obj.SetMinimum(-1e-8)
             obj.SetMaximum(7.0)
-            p = _ecal_quality_colors()
-            ROOT.gStyle.SetPalette(len(p), p)
+            ROOT.gStyle.SetPalette(len(_ECAL_QUALITY_COLORS), _ECAL_QUALITY_COLORS)
             ROOT.gStyle.SetNumberContours(7)  # override style_canvas()'s 255
             obj.SetContour(7)                  # one bin per quality flag 0-6
             draw_opt = "COL"
@@ -142,8 +124,6 @@ def pre_draw_ecal(canvas, obj, path: str) -> str | None:
 
 
 def post_draw_ecal(canvas, obj, path: str) -> None:
-    if "EcalBarrel" not in path:
-        return
     name = path.lower()
     if not any(k in name for k in ("quality", "global summary", "status summary", "summarymap")):
         return
@@ -151,30 +131,44 @@ def post_draw_ecal(canvas, obj, path: str) -> None:
     if not cls.startswith(("TH2", "TProfile2D")):
         return
 
-    ymin = obj.GetYaxis().GetXmin()
-    ymax = obj.GetYaxis().GetXmax()
     xmin = obj.GetXaxis().GetXmin()
     xmax = obj.GetXaxis().GetXmax()
+    ymin = obj.GetYaxis().GetXmin()
+    ymax = obj.GetYaxis().GetXmax()
 
-    # 17 vertical lines marking the 18 SM phi boundaries (every 20 iphi)
     line = ROOT.TLine()
     line.SetLineColor(ROOT.kBlack)
     line.SetLineWidth(1)
-    for i in range(1, 18):
-        line.DrawLine(i * 20, ymin, i * 20, ymax)
-    # Horizontal separator between EB+ and EB- (ieta = 0)
-    line.DrawLine(xmin, 0, xmax, 0)
 
-    # SM number labels: "+NN" on EB+ side, "-NN" on EB- side
     t = ROOT.TLatex()
-    t.SetTextSize(0.035)
     t.SetTextAlign(22)  # centre-centre
-    y_pos  =  ymax * 0.65  # ~+55 for the standard -85/+85 axis
-    y_neg  =  ymin * 0.65  # ~-55
-    for i in range(18):
-        iphi_c = 10 + i * 20  # SM phi centres at 10, 30, 50, ..., 350
-        t.DrawLatex(iphi_c, y_pos, f"+{i+1:02d}")
-        t.DrawLatex(iphi_c, y_neg, f"-{i+1:02d}")
+
+    if "EcalBarrel" in path:
+        # 17 vertical lines → 18 SM phi boundaries (every 20 iphi)
+        for i in range(1, 18):
+            line.DrawLine(i * 20, ymin, i * 20, ymax)
+        # Horizontal EB+/EB- separator at ieta = 0
+        line.DrawLine(xmin, 0, xmax, 0)
+        # SM labels: "+NN" upper half, "-NN" lower half
+        t.SetTextSize(0.035)
+        y_pos = ymax * 0.65   # ~+55 for the standard ±85 axis
+        y_neg = ymin * 0.65   # ~-55
+        for i in range(18):
+            iphi_c = 10 + i * 20  # SM phi centres: 10, 30, …, 350
+            t.DrawLatex(iphi_c, y_pos, f"+{i+1:02d}")
+            t.DrawLatex(iphi_c, y_neg, f"-{i+1:02d}")
+
+    elif "EcalEndcap" in path:
+        # Dee sector divider: vertical line at the midpoint of the ix axis
+        mid_x = (xmin + xmax) / 2.0
+        line.DrawLine(mid_x, ymin, mid_x, ymax)
+        # Determine EE+ vs EE- from the path
+        sign = "-" if ("EE -" in path or "EEM" in path) else "+"
+        # Labels for the two Dee sectors, near the top of the plot
+        t.SetTextSize(0.05)
+        y_label = ymin + (ymax - ymin) * 0.85
+        t.DrawLatex((xmin + mid_x) / 2.0, y_label, f"EE{sign}D1")
+        t.DrawLatex((mid_x + xmax) / 2.0, y_label, f"EE{sign}D2")
 
 
 # ---------------------------------------------------------------------------
