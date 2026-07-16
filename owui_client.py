@@ -105,7 +105,7 @@ def _image_content_block(image_path: str | Path) -> dict:
 def list_models(detail: bool = False) -> list:
     """
     Return available models — authenticated via LiteLLM key.
- 
+
     Parameters
     ----------
     detail : False (default) → list of model ID strings
@@ -139,6 +139,17 @@ def query(
     no_think: bool = False,
 ) -> dict:
     model = model or MODEL
+    model_requested = model   # what we actually asked for — always trust this for
+                               # filenames/logging, since the backend can echo a
+                               # different name (see model_used below)
+
+    # NOTE: this has to happen *before* `content`/`messages` are built below.
+    # It previously ran after they were constructed, so the "/no_think" suffix
+    # was silently dropped and never reached the actual API payload.
+    if no_think:
+        prompt = f"{prompt}\n/no_think"
+        if system:
+            system = f"{system}\n/no_think"
 
     if image_path:
         content = [
@@ -155,14 +166,9 @@ def query(
 
     payload: dict = {"messages": messages, "stream": True}  # <-- enable streaming
 
-    if no_think:
-        prompt = f"{prompt}\n/no_think"
-        if system:
-            system = f"{system}\n/no_think"
-
     if model:
         payload["model"] = model
-        
+
     if collection_ids:
         payload["files"] = [{"type": "collection", "id": cid} for cid in collection_ids]
 
@@ -197,6 +203,13 @@ def query(
                     continue
                 if t_first_token is None:
                     t_first_token = time.time()
+                # NOTE: OpenWebUI/Ollama can echo back a different name than the
+                # one requested — e.g. a custom model like "qwen3-vl-longctx"
+                # (an Ollama model built from a Modelfile with a bumped num_ctx)
+                # gets echoed here as its underlying base tag, "qwen3-vl:latest".
+                # model_used below reflects that echoed value; it is NOT what
+                # gets written to the output file's "Model:" header — see
+                # `model_requested` / the "model" key in the returned dict.
                 model_used = chunk.get("model", model_used)
                 choices = chunk.get("choices", [])
                 if choices:
@@ -208,7 +221,8 @@ def query(
         return {
             "prompt":              prompt,
             "image":               str(image_path) if image_path else None,
-            "model_used":          model_used,
+            "model":               model_requested,  # authoritative: what was requested — use this for filenames/headers
+            "model_used":          model_used,       # diagnostic only: what the backend echoed back (may differ, see NOTE above)
             "response":            full_response,
             "load_latency_s":      ttft,           # model load + prompt eval
             "generation_latency_s": round(t_end - t_first_token, 2) if t_first_token else None,
@@ -219,7 +233,8 @@ def query(
         return {
             "prompt":              prompt,
             "image":               str(image_path) if image_path else None,
-            "model_used":          model,
+            "model":               model_requested,
+            "model_used":          model_requested,  # no stream was ever read, so nothing was echoed back
             "response":            None,
             "load_latency_s":      None,
             "generation_latency_s": None,
@@ -336,7 +351,9 @@ def batch_query_images(
     Returns
     -------
     List of result dicts, one per (model, plot_name, image) combination.
-    Each dict has keys: plot_name, image, model_used, response, latency_s, error.
+    Each dict has keys: plot_name, image, model, model_used, response, latency_s, error.
+    `model` is the requested model name (authoritative, used for filenames/headers);
+    `model_used` is whatever the backend echoed back, kept only for diagnostics.
     """
     image_root  = Path(image_root)
     output_root = Path(output_root)
@@ -375,7 +392,7 @@ def batch_query_images(
             out_file = resolve_output_file(out_dir, image_path, model)
 
             with open(out_file, "w") as f:
-                f.write(f"Model:    {result['model_used']}\n")
+                f.write(f"Model:    {result['model']}\n")
                 f.write(f"Plot:     {plot_name}\n")
                 f.write(f"Image:    {result['image']}\n")
                 f.write(f"Run ID:   {run_id or '(overwrite)'}\n")
@@ -398,4 +415,3 @@ def batch_query_images(
             time.sleep(delay)
 
     return results
-

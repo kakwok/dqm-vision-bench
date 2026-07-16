@@ -12,7 +12,7 @@
 #       <run_id>_with_goodref/...
 #       <run_id>_with_refs/...
 #   truth/
-#       <plot>/<image_stem>_truth.txt
+#       <plot>/run<XXXXXX>.txt
 
 # %% ── Imports & config ───────────────────────────────────────────────────────
 import re
@@ -46,33 +46,43 @@ except SystemExit:
     JUDGE_OVERRIDE = None
 
 # ── Paths ──────────────────────────────────────────────────────────────────────
-OUTPUT_ROOT = Path('results')
-TRUTH_ROOT  = Path('results/truth')
-EVAL_CSV    = Path('eval_scores.csv')   # cached judge results; re-run resumes from here
+IMAGE_ROOT       = Path('images')          # source images (mirrors batch_query.ipynb's IMAGE_ROOT)
+OUTPUT_ROOT      = Path('results')         # responses from the LLMs we're judging (per batch_query.ipynb runs)
+TRUTH_ROOT       = Path('truth')           # human-authored ground truth
+EVAL_OUTPUT_ROOT = Path('eval_output')     # this script's own output: score CSV + figures
+EVAL_CSV         = EVAL_OUTPUT_ROOT / 'eval_scores.csv'  # cached judge results; re-run resumes from here
+
+EVAL_OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
 
 # ── Experiment config ──────────────────────────────────────────────────────────
-RUN_ID   = 'baseline'
-VARIANTS = ['no_ref', 'with_ref', 'with_goodref', 'with_refs']
+RUN_ID   = 'goodtest'
+# VARIANTS = ['no_ref', 'with_ref', 'with_goodref', 'with_refs']
+VARIANTS = ['no_ref', 'with_ref', 'with_refs']
 MODELS   = [
     'qwen2.5vl:latest',
     'qwen3-vl-longctx',
     'qwen3-vl-longctx32b',
     'gemma3:latest',
+    'litellm-ow.google/gemma4-31b',
 ]
 DELAY = 1.0   # seconds between judge calls
 
 # Single independent judge for all models (text-only task, no self-judging risk)
-JUDGE_MODEL = 'hopper.openai/gpt-oss-120b'
+JUDGE_MODEL = 'vllm.gpt-oss:120b'
 JUDGE_MODEL_FOR = {m: [JUDGE_MODEL] for m in MODELS}
 
 # Pairwise comparisons of interest:
-#   version upgrade : qwen2.5vl vs qwen3-vl-longctx  (same size, next gen)
+#   version upgrade : qwen2.5vl vs qwen3-vl-longctx      (same size, next gen)
 #   size scaling    : qwen3-vl-longctx vs qwen3-vl-longctx32b
 #   architecture    : qwen3-vl-longctx vs gemma3:latest  (same size, different arch)
+#   generational    : gemma3:latest vs gemma4-31b        (same family, next gen)
+#   architecture    : qwen3-vl-longctx32b vs gemma4-31b  (similar size, ~31-32B)
 PAIRWISE = [
-    ('qwen2.5vl:latest',  'qwen3-vl-longctx',    'version upgrade (same size)'),
-    ('qwen3-vl-longctx',  'qwen3-vl-longctx32b', 'size scaling (same arch)'),
-    ('qwen3-vl-longctx',  'gemma3:latest',        'architecture (same size)'),
+    ('qwen2.5vl:latest',    'qwen3-vl-longctx',              'version upgrade (same size)'),
+    ('qwen3-vl-longctx',    'qwen3-vl-longctx32b',           'size scaling (same arch)'),
+    ('qwen3-vl-longctx',    'gemma3:latest',                 'architecture (same size)'),
+    ('gemma3:latest',       'litellm-ow.google/gemma4-31b',  'generational upgrade (Gemma family)'),
+    ('qwen3-vl-longctx32b', 'litellm-ow.google/gemma4-31b',  'architecture (similar size, ~31-32B)'),
 ]
 
 SCORE_COLS      = ['s1_instruction_quote', 's2_plot_description',
@@ -97,10 +107,15 @@ def parse_result_file(path: Path) -> dict:
         try:    return float(s.rstrip('s'))
         except: return None
 
+    plot       = meta.get('plot', '')
+    image_name = Path(meta['image']).name if meta.get('image') else ''
+    image_path = (IMAGE_ROOT / plot / image_name) if image_name else None
+
     return {
         'model':                meta.get('model', ''),
-        'plot':                 meta.get('plot', ''),
-        'image':                meta.get('image', ''),
+        'plot':                 plot,
+        'image':                meta.get('image', ''),        # raw string as recorded by batch_query
+        'image_path':           str(image_path) if image_path else None,  # resolved via IMAGE_ROOT
         'run_id':               meta.get('run_id', ''),
         'prompt':               meta.get('prompt', ''),
         'load_latency_s':       _lat(meta.get('load_latency', '')),
@@ -125,41 +140,22 @@ def load_all_results(output_root: Path, run_id: str, variants: list,
         if not run_dir.exists():
             print(f'  WARNING: {run_dir} not found — skipping')
             continue
-        # ── WORKAROUND START ──────────────────────────────────────────────────
-        # OpenWebUI returns a normalised model name in the SSE stream (e.g.
-        # "qwen3-vl:latest") that differs from the requested name stored in
-        # the filename (e.g. "qwen3-vl-longctx"). Until owui_client.py is
-        # fixed to write the requested model name to the header, we derive
-        # the model from the filename instead of the Model: header.
-        # Remove this block (and the model_from_file references below) once
-        # owui_client.py writes `model` (not `model_used`) to the txt header.
-        safe_to_model = {
-            m.replace('/', '_').replace(':', '_'): m
-            for m in (models or [])
-        }
-        # ── WORKAROUND END ────────────────────────────────────────────────────
 
         for txt in sorted(run_dir.rglob('*.txt')):
             parsed = parse_result_file(txt)
-
-            # ── WORKAROUND START ──────────────────────────────────────────────
-            model_from_file = None
-            for safe, original in safe_to_model.items():
-                if txt.stem.endswith('_' + safe):
-                    model_from_file = original
-                    break
-            # ── WORKAROUND END ────────────────────────────────────────────────
-
-            if models:
-                if model_from_file is None:
-                    continue  # file belongs to an old/retired model — skip
-                parsed['model'] = model_from_file  # WORKAROUND: remove once owui_client.py is fixed
+            if models and parsed['model'] not in models:
+                continue  # file belongs to an old/retired model — skip
             parsed['variant'] = variant
             parsed['file']    = str(txt)
             parsed['mtime']   = txt.stat().st_mtime
             rows.append(parsed)
 
     df = pd.DataFrame(rows)
+    if df.empty:
+        print(f'  No matching result files found under {output_root}/{run_id}_<variant>/ '
+              f'for models={models}. Check that the directories exist and that the '
+              f"'Model:' header in those .txt files matches an entry in MODELS.")
+        return df
 
     # Deduplicate: same (model, variant, image) may exist from multiple batch
     # runs. Keep the most recently modified file.
@@ -180,9 +176,16 @@ def load_all_results(output_root: Path, run_id: str, variants: list,
 
 
 def find_truth_file(truth_root: Path, plot: str, image_str: str) -> Path | None:
-    """Find truth/<plot>/<image_stem>_truth.txt"""
-    stem      = Path(image_str).stem
-    candidate = truth_root / plot / f'{stem}_truth.txt'
+    """Find truth/<plot>/run<XXXXXX>.txt
+
+    Truth files are keyed by run number only (e.g. "run398185.txt"), not by
+    the full image filename — multiple image variants from the same run
+    share one truth file.
+    """
+    stem  = Path(image_str).stem
+    match = re.search(r'run\d+', stem)
+    run   = match.group() if match else stem
+    candidate = truth_root / plot / f'{run}.txt'
     return candidate if candidate.exists() else None
 
 
@@ -337,78 +340,113 @@ if df_eval.empty:
     raise RuntimeError(
         'No evaluation scores produced. Check that:\n'
         '  1. Result files exist under results/<run_id>_<variant>/\n'
-        '  2. Truth files exist under truth/<plot>/<image_stem>_truth.txt\n'
+        '  2. Truth files exist under truth/<plot>/run<XXXXXX>.txt\n'
         '  3. Judge model names are correct (run list_models() to verify)\n'
         f'  4. JUDGE_OVERRIDE={JUDGE_OVERRIDE!r}, JUDGE_MODEL_FOR={JUDGE_MODEL_FOR}'
     )
 
+# Drop rows scored by a judge that's no longer in use. EVAL_CSV is append-only
+# (the cache key is (file, judge_model)), so switching JUDGE_MODEL doesn't
+# remove old scores — it just adds new ones alongside them. Without this
+# filter, a stale judge's rows would silently blend into every groupby('model')
+# average below and spuriously trigger the inter-judge agreement section.
+active_judges = {m for models in JUDGE_MODEL_FOR.values() for m in models}
+stale = df_eval[~df_eval['judge_model'].isin(active_judges)]
+if not stale.empty:
+    print(
+        f"Ignoring {len(stale)} cached score(s) from judge(s) no longer in use: "
+        f"{sorted(stale['judge_model'].unique())} (still in {EVAL_CSV}, just excluded from this analysis)"
+    )
+df_eval = df_eval[df_eval['judge_model'].isin(active_judges)].reset_index(drop=True)
+
 df_eval['variant'] = pd.Categorical(df_eval['variant'], categories=VARIANTS, ordered=True)
-df_eval['s4_correct'] = (df_eval['s4_decision'] == 5)
+df_eval['s4_correct'] = (df_eval['s4_decision'] >= 3)  # rubric: 3-5 = correct verdict, 1-2 = wrong verdict
 judge_models = sorted(df_eval['judge_model'].unique())
 display(df_eval[['model', 'variant', 'image'] + SCORE_COLS])
 
 
-# %% ── Prompt performance analysis ───────────────────────────────────────────
-# For each model, find which prompt variant produces the highest overall score.
-# If one variant wins across all models, use it for all subsequent analysis.
+# %% ── Reference-variant comparison: find the optimal prompt variant ─────────
+# Compare all prompt variants (no_ref / with_ref / with_refs / ...) and pick
+# whichever performs best. The decision is based on Section 1 (instruction
+# quote) rather than "overall": S1 measures whether the model cited the right
+# rule, which is the most direct signal of whether the extra reference
+# guidance actually helped vs. just judging general response quality.
+# Whichever variant wins on average is used for all downstream benchmarking
+# plots below.
+
+DECISION_COL   = 's1_instruction_quote'
+DECISION_LABEL = 'Section 1 (instruction quote)'
 
 print('=' * 70)
-print('PROMPT PERFORMANCE ANALYSIS')
+print(f'PROMPT-VARIANT COMPARISON: {" vs ".join(VARIANTS)}')
+print(f'(decision based on {DECISION_LABEL})')
 print('=' * 70)
 
-variant_scores = (
-    df_eval.groupby(['model', 'variant'])['overall']
-    .mean().round(2).unstack('variant').reindex(columns=VARIANTS)
-)
-display(variant_scores)
+REF_VARIANTS = VARIANTS
+have_all = all(v in df_eval['variant'].unique() for v in REF_VARIANTS)
 
-best_per_model = {}
-for model in MODELS:
-    if model not in variant_scores.index:
-        continue
-    row = variant_scores.loc[model].dropna()
-    if row.empty:
-        continue
-    best_variant = row.idxmax()
-    best_score   = row.max()
-    worst_variant = row.idxmin()
-    worst_score   = row.min()
-    best_per_model[model] = best_variant
-    print(
-        f'  {model:30s}  best={best_variant} ({best_score:.2f})'
-        f'  worst={worst_variant} ({worst_score:.2f})'
-        f'  Δ={best_score - worst_score:.2f}'
+if not have_all:
+    found = sorted(str(v) for v in df_eval['variant'].dropna().unique())
+    print(f'  Need all of {REF_VARIANTS} to compare — found: {found}.')
+    print('  Falling back to using all available variants for benchmarking.')
+    BENCH_VARIANT = None
+else:
+    # Cell-by-cell: which variant wins, for every model × image?
+    ref_pivot = (
+        df_eval[df_eval['variant'].isin(REF_VARIANTS)]
+        .groupby(['model', 'image', 'variant'])[DECISION_COL].mean()
+        .unstack('variant')
+        .reindex(columns=REF_VARIANTS)
+        .dropna(subset=REF_VARIANTS)
     )
+    if not ref_pivot.empty:
+        # Ties go to whichever variant is listed first in REF_VARIANTS.
+        ref_pivot['best_variant'] = ref_pivot[REF_VARIANTS].idxmax(axis=1)
+        n_total    = len(ref_pivot)
+        win_counts = ref_pivot['best_variant'].value_counts().reindex(REF_VARIANTS, fill_value=0)
+        print(f'  Best variant per model×image, on {DECISION_LABEL} ({n_total} combinations):')
+        for v in REF_VARIANTS:
+            print(f'    {v}: wins {win_counts[v]}/{n_total} ({win_counts[v] / n_total * 100:.0f}%)')
+        display(ref_pivot.round(2))
 
-# Check if one variant is best across all models
-best_counts = {}
-for v in best_per_model.values():
-    best_counts[v] = best_counts.get(v, 0) + 1
+    # Per-model average (across images)
+    per_model = (
+        df_eval[df_eval['variant'].isin(REF_VARIANTS)]
+        .groupby(['model', 'variant'])[DECISION_COL].mean()
+        .unstack('variant').reindex(index=MODELS, columns=REF_VARIANTS)
+    )
+    print(f'\n  Per-model average "{DECISION_COL}" score:')
+    display(per_model.round(2))
 
-consensus_variant = None
-if best_counts:
-    top_variant, top_count = max(best_counts.items(), key=lambda x: x[1])
-    if top_count == len(best_per_model):
-        consensus_variant = top_variant
-        print(f'\n✓ Consensus: "{consensus_variant}" is the best prompt for ALL models.')
-        print(  f'  Using only "{consensus_variant}" for subsequent benchmarking.\n')
+    # The decision itself: average across ALL models and ALL images combined
+    decision_avg = (
+        df_eval[df_eval['variant'].isin(REF_VARIANTS)]
+        .groupby('variant')[DECISION_COL].mean()
+        .reindex(REF_VARIANTS)
+    )
+    print(f'\n  Average {DECISION_LABEL} score by variant:')
+    for v in REF_VARIANTS:
+        val = decision_avg.get(v, float('nan'))
+        print(f'    {v}: {val:.3f}' if pd.notna(val) else f'    {v}: (no data)')
+
+    if decision_avg.notna().any():
+        BENCH_VARIANT = decision_avg.idxmax()
+        print(f'\n✓ "{BENCH_VARIANT}" has the highest average {DECISION_LABEL} score — using it for benchmarking.')
     else:
-        print(f'\n✗ No single best prompt across all models.')
-        print(  f'  Best counts: {best_counts}')
-        print(  f'  Proceeding with all variants for subsequent benchmarking.\n')
+        BENCH_VARIANT = None
+        print(f'\n  No variant has {DECISION_LABEL} data — falling back to all variants for benchmarking.')
 
-# Filter df_eval for downstream analysis if there is a consensus
 df_bench = (
-    df_eval[df_eval['variant'] == consensus_variant].copy()
-    if consensus_variant else df_eval.copy()
+    df_eval[df_eval['variant'] == BENCH_VARIANT].copy()
+    if BENCH_VARIANT else df_eval.copy()
 )
-BENCH_VARIANTS = [consensus_variant] if consensus_variant else VARIANTS
-print(f'Variants used for benchmarking: {BENCH_VARIANTS}')
+bench_label = f'prompt: {BENCH_VARIANT}' if BENCH_VARIANT else 'all variants'
+print(f'\nVariant used for benchmarking: {bench_label}')
 print('=' * 70)
 
 
 # %% ── Score tables ───────────────────────────────────────────────────────────
-print('\n=== Mean scores by model (prompt: ' + (consensus_variant or 'all variants') + ') ===')
+print('\n=== Mean scores by model (' + bench_label + ') ===')
 display(
     df_bench.groupby('model')[SCORE_COLS]
     .mean().round(2).reindex(MODELS)
@@ -434,40 +472,21 @@ display(
     .reindex(MODELS).to_frame()
 )
 
-# %% ── Pairwise model comparisons ────────────────────────────────────────────
-# Uses df_bench (consensus prompt if found, else all variants).
+# %% ── Pairwise model comparisons (data prep) ────────────────────────────────
+# Uses df_bench (the chosen benchmarking variant).
 
-print('=== Pairwise score differences (B − A, positive = B is better) ===\n')
 pair_rows = []
-
 for model_a, model_b, label in PAIRWISE:
-    a = df_bench[df_bench['model'] == model_a].groupby('variant')[SCORE_COLS].mean()
-    b = df_bench[df_bench['model'] == model_b].groupby('variant')[SCORE_COLS].mean()
-
-    if a.empty or b.empty:
+    a = df_bench[df_bench['model'] == model_a][SCORE_COLS].mean()
+    b = df_bench[df_bench['model'] == model_b][SCORE_COLS].mean()
+    if a.isna().all() or b.isna().all():
         print(f'  Skipping "{label}" — one or both models have no scores yet')
         continue
-
-    diff = (b - a).reindex(VARIANTS)
-    mean_diff = diff.mean()
-
-    print(f'  {label}')
-    print(f'  A = {model_a}')
-    print(f'  B = {model_b}')
-    display(diff.round(2))
-    print(f'  Mean across variants: {mean_diff.round(2).to_dict()}\n')
-
-    for variant in VARIANTS:
-        if variant in diff.index:
-            for col in SCORE_COLS:
-                pair_rows.append({
-                    'comparison': label,
-                    'model_a':    model_a,
-                    'model_b':    model_b,
-                    'variant':    variant,
-                    'section':    col,
-                    'diff':       diff.loc[variant, col],
-                })
+    for col in SCORE_COLS:
+        pair_rows.append({
+            'comparison': label, 'model_a': model_a, 'model_b': model_b,
+            'section': col, 'score_a': a[col], 'score_b': b[col], 'diff': b[col] - a[col],
+        })
 
 df_pairs = pd.DataFrame(pair_rows)
 
@@ -517,11 +536,85 @@ if len(judge_models) > 1:
         print('  Not enough overlapping judge scores to compute agreement.')
 
 
-# %% ── Visualisations ─────────────────────────────────────────────────────────
-models = df_eval['model'].unique()
-colors = plt.cm.Set2(np.linspace(0, 1, len(VARIANTS)))
+# %% ── Plotting helpers ───────────────────────────────────────────────────────
+def short_name(model: str) -> str:
+    """Shorten a model id for use as an axis/legend label."""
+    name = model.split(':')[0].replace('qwen3-vl-longctx', 'qwen3-longctx')
+    return name.split('/')[-1]  # drop any "litellm-ow.xxx/" provider prefix
 
-# ── Extra figure: overall score by judge model ───────────────────────────────
+
+def plot_section_scores(df_subset, models, title, out_path):
+    """Heatmap of mean S1-S4/overall scores, one row per model."""
+    pivot = df_subset.groupby('model')[SCORE_COLS].mean().reindex(models)
+    fig, ax = plt.subplots(figsize=(8, max(2.5, 0.5 * len(models) + 1.5)))
+    im = ax.imshow(pivot.values, cmap='RdYlGn', vmin=1, vmax=5, aspect='auto')
+    ax.set_xticks(range(len(SCORE_COLS)))
+    ax.set_xticklabels(SECTION_LABELS, rotation=20, ha='right', fontsize=8)
+    ax.set_yticks(range(len(models)))
+    ax.set_yticklabels([short_name(m) for m in models], fontsize=9)
+    ax.set_title(title, fontsize=10)
+    plt.colorbar(im, ax=ax)
+    for i in range(len(models)):
+        for j in range(len(SCORE_COLS)):
+            val = pivot.values[i, j]
+            if pd.notna(val):
+                ax.text(j, i, f'{val:.1f}', ha='center', va='center', fontsize=9, fontweight='bold')
+    plt.tight_layout()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(out_path, dpi=150, bbox_inches='tight')
+    plt.close(fig)
+
+
+def plot_s4_accuracy(df_subset, models, title, out_path):
+    """Bar chart of S4 (Good/Bad) decision accuracy per model."""
+    acc = df_subset.groupby('model')['s4_correct'].mean().mul(100).reindex(models)
+    colors_m = plt.cm.Set1(np.linspace(0, 1, len(models)))
+    fig, ax = plt.subplots(figsize=(max(5, 1.3 * len(models)), 4))
+    ax.bar(range(len(models)), acc.values, color=colors_m)
+    ax.set_xticks(range(len(models)))
+    ax.set_xticklabels([short_name(m) for m in models], rotation=20, ha='right', fontsize=8)
+    ax.set_ylim(0, 110)
+    ax.axhline(100, color='green', linestyle='--', linewidth=0.8, alpha=0.5)
+    ax.set_title(title, fontsize=10)
+    ax.set_ylabel('% correct')
+    for i, v in enumerate(acc.values):
+        if pd.notna(v):
+            ax.text(i, v + 1, f'{v:.0f}%', ha='center', fontsize=9)
+    plt.tight_layout()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(out_path, dpi=150, bbox_inches='tight')
+    plt.close(fig)
+
+
+def plot_generation_latency(df_subset, models, title, out_path):
+    """Bar chart of mean generation latency (s) per model."""
+    lat = df_subset.groupby('model')['generation_latency_s'].mean().reindex(models)
+    colors_m = plt.cm.Set1(np.linspace(0, 1, len(models)))
+    fig, ax = plt.subplots(figsize=(max(5, 1.3 * len(models)), 4))
+    ax.bar(range(len(models)), lat.values, color=colors_m)
+    ax.set_xticks(range(len(models)))
+    ax.set_xticklabels([short_name(m) for m in models], rotation=20, ha='right', fontsize=8)
+    ax.set_title(title, fontsize=10)
+    ax.set_ylabel('seconds')
+    max_lat = np.nanmax(lat.values) if np.any(~np.isnan(lat.values.astype(float))) else 1.0
+    for i, v in enumerate(lat.values):
+        if pd.notna(v):
+            ax.text(i, v + max_lat * 0.02, f'{v:.1f}s', ha='center', fontsize=9)
+    plt.tight_layout()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(out_path, dpi=150, bbox_inches='tight')
+    plt.close(fig)
+
+
+# %% ── Visualisations ─────────────────────────────────────────────────────────
+COMBINED_DIR  = EVAL_OUTPUT_ROOT / 'combined'    # all-images-together plots
+PER_IMAGE_DIR = EVAL_OUTPUT_ROOT / 'per_image'   # one subfolder per image
+PAIRWISE_DIR  = COMBINED_DIR / 'pairwise'
+COMBINED_DIR.mkdir(parents=True, exist_ok=True)
+PER_IMAGE_DIR.mkdir(parents=True, exist_ok=True)
+PAIRWISE_DIR.mkdir(parents=True, exist_ok=True)
+
+# ── Extra figure: overall score by judge model (only meaningful with >1 judge)
 if len(judge_models) > 1:
     fig_j, ax_j = plt.subplots(figsize=(10, 4))
     judge_pivot = (
@@ -535,39 +628,38 @@ if len(judge_models) > 1:
     ax_j.tick_params(axis='x', rotation=20)
     ax_j.legend(title='judge', fontsize=8)
     plt.tight_layout()
-    out_judge = f'eval_{RUN_ID}_by_judge.png'
+    out_judge = COMBINED_DIR / f'eval_{RUN_ID}_by_judge.png'
     plt.savefig(out_judge, dpi=150, bbox_inches='tight')
-    plt.show()
+    plt.close(fig_j)
     print(f'Saved: {out_judge}')
 
-# ── Figure 1: Prompt comparison (always uses all variants) ───────────────────
+# ── Figure: prompt-variant comparison (heatmap + radar) ───────────────────────
 fig1, axes1 = plt.subplots(1, 2, figsize=(14, 5))
 
-# (A) Overall score heatmap: model × variant
 pivot = (
-    df_eval.groupby(['model', 'variant'])['overall']
+    df_eval.groupby(['model', 'variant'])[DECISION_COL]
     .mean().unstack('variant').reindex(columns=VARIANTS, index=MODELS)
 )
 im = axes1[0].imshow(pivot.values, cmap='RdYlGn', vmin=1, vmax=5, aspect='auto')
 axes1[0].set_xticks(range(len(VARIANTS)))
 axes1[0].set_xticklabels(VARIANTS, rotation=20, ha='right', fontsize=9)
 axes1[0].set_yticks(range(len(MODELS)))
-axes1[0].set_yticklabels(MODELS, fontsize=9)
-axes1[0].set_title('Overall score by model × prompt variant')
+axes1[0].set_yticklabels([short_name(m) for m in MODELS], fontsize=9)
+axes1[0].set_title(f'{DECISION_LABEL} score by model × prompt variant\n(this is what the blue-box decision is based on)')
 plt.colorbar(im, ax=axes1[0])
 for i in range(len(MODELS)):
     for j in range(len(VARIANTS)):
         val = pivot.values[i, j]
-        if not np.isnan(val):
+        if pd.notna(val):
             axes1[0].text(j, i, f'{val:.1f}', ha='center', va='center',
                           fontweight='bold', fontsize=11)
-        # Highlight best variant per model
-        if not np.isnan(val) and MODELS[i] in best_per_model and VARIANTS[j] == best_per_model[MODELS[i]]:
-            axes1[0].add_patch(plt.Rectangle((j - 0.5, i - 0.5), 1, 1,
-                               fill=False, edgecolor='blue', linewidth=2))
+# Highlight the variant chosen for benchmarking, across every model row
+if BENCH_VARIANT in VARIANTS:
+    j_bench = VARIANTS.index(BENCH_VARIANT)
+    for i in range(len(MODELS)):
+        axes1[0].add_patch(plt.Rectangle((j_bench - 0.5, i - 0.5), 1, 1,
+                           fill=False, edgecolor='blue', linewidth=2))
 
-# (B) Radar chart: per-section by variant
-ax_r = axes1[1]
 ax_r = fig1.add_subplot(1, 2, 2, polar=True)
 section_cols = SCORE_COLS[:-1]
 N      = len(section_cols)
@@ -586,103 +678,89 @@ ax_r.set_ylim(1, 5)
 ax_r.set_title('Per-section scores by variant\n(avg across models)', pad=15, fontsize=9)
 ax_r.legend(loc='upper right', bbox_to_anchor=(1.45, 1.15), fontsize=8)
 
-bench_label = f'prompt: {consensus_variant}' if consensus_variant else 'all variants'
-fig1.suptitle(f'DQM Prompt Comparison — {RUN_ID}', fontsize=13, fontweight='bold')
+fig1.suptitle(f'DQM Prompt Comparison — {RUN_ID} (blue box = variant used for benchmarking)',
+              fontsize=12, fontweight='bold')
 plt.tight_layout()
-out_prompt = f'eval_{RUN_ID}_prompts.png'
+out_prompt = COMBINED_DIR / f'eval_{RUN_ID}_prompts.png'
 plt.savefig(out_prompt, dpi=150, bbox_inches='tight')
-plt.show()
+plt.close(fig1)
 print(f'Saved: {out_prompt}')
 
-# ── Figure 2: Model benchmarking (uses df_bench = consensus prompt or all) ───
-fig2, axes2 = plt.subplots(1, 3, figsize=(18, 5))
+# ── Combined plots: all images together, using the chosen benchmarking variant
+plot_section_scores(df_bench, MODELS, f'Section scores by model — all images ({bench_label})',
+                     COMBINED_DIR / f'section_scores_{RUN_ID}.png')
+plot_s4_accuracy(df_bench, MODELS, f'S4 decision accuracy — all images ({bench_label})',
+                  COMBINED_DIR / f's4_accuracy_{RUN_ID}.png')
+plot_generation_latency(df_bench, MODELS, f'Generation latency — all images ({bench_label})',
+                         COMBINED_DIR / f'generation_latency_{RUN_ID}.png')
+print(f'Saved combined section-score / S4-accuracy / latency plots to {COMBINED_DIR}/')
 
-# (A) Per-section heatmap: model × section, using bench prompt
-pivot_bench = (
-    df_bench.groupby('model')[SCORE_COLS]
-    .mean().reindex(MODELS)
-)
-im2 = axes2[0].imshow(pivot_bench.values, cmap='RdYlGn', vmin=1, vmax=5, aspect='auto')
-axes2[0].set_xticks(range(len(SCORE_COLS)))
-axes2[0].set_xticklabels(SECTION_LABELS, rotation=20, ha='right', fontsize=8)
-axes2[0].set_yticks(range(len(MODELS)))
-axes2[0].set_yticklabels(MODELS, fontsize=9)
-axes2[0].set_title(f'Section scores by model\n({bench_label})')
-plt.colorbar(im2, ax=axes2[0])
-for i in range(len(MODELS)):
-    for j in range(len(SCORE_COLS)):
-        val = pivot_bench.values[i, j]
-        if not np.isnan(val):
-            axes2[0].text(j, i, f'{val:.1f}', ha='center', va='center',
-                          fontsize=9, fontweight='bold')
+# ── Per-image plots: same three plots, one set per image ─────────────────────
+image_names = sorted(df_bench['image'].dropna().unique())
+for img_name in image_names:
+    sub = df_bench[df_bench['image'] == img_name]
+    img_dir = PER_IMAGE_DIR / Path(img_name).stem
+    plot_section_scores(sub, MODELS, f'Section scores by model — {img_name} ({bench_label})',
+                         img_dir / 'section_scores.png')
+    plot_s4_accuracy(sub, MODELS, f'S4 decision accuracy — {img_name} ({bench_label})',
+                      img_dir / 's4_accuracy.png')
+    plot_generation_latency(sub, MODELS, f'Generation latency — {img_name} ({bench_label})',
+                             img_dir / 'generation_latency.png')
+print(f'Saved {len(image_names)} per-image plot sets to {PER_IMAGE_DIR}/<image>/')
 
-# (B) S4 decision accuracy
-acc_bench = (
-    df_bench.groupby('model')['s4_correct']
-    .mean().mul(100).reindex(MODELS)
-)
-colors_m = plt.cm.Set1(np.linspace(0, 1, len(MODELS)))
-axes2[1].bar(range(len(MODELS)), acc_bench.values, color=colors_m)
-axes2[1].set_xticks(range(len(MODELS)))
-axes2[1].set_xticklabels(MODELS, rotation=20, ha='right', fontsize=8)
-axes2[1].set_ylim(0, 110)
-axes2[1].axhline(100, color='green', linestyle='--', linewidth=0.8, alpha=0.5)
-axes2[1].set_title(f'S4 decision accuracy (%)\n({bench_label})')
-axes2[1].set_ylabel('% correct')
-for i, v in enumerate(acc_bench.values):
-    if not np.isnan(v):
-        axes2[1].text(i, v + 1, f'{v:.0f}%', ha='center', fontsize=9)
+# %% ── Pairwise comparison plot (redesigned) ──────────────────────────────────
+# Grouped bars of each model's actual scores per section — easier to read than
+# a raw score-difference chart — plus a plain-language verdict printed to the
+# console and drawn under the plot itself.
+print('=== Pairwise comparisons ===')
+for model_a, model_b, label in PAIRWISE:
+    sub = df_pairs[df_pairs['comparison'] == label]
+    if sub.empty:
+        continue  # already reported as skipped during data prep above
 
-# (C) Generation latency
-lat_bench = df_bench.groupby('model')['generation_latency_s'].mean().reindex(MODELS)
-axes2[2].bar(range(len(MODELS)), lat_bench.values, color=colors_m)
-axes2[2].set_xticks(range(len(MODELS)))
-axes2[2].set_xticklabels(MODELS, rotation=20, ha='right', fontsize=8)
-axes2[2].set_title(f'Generation latency (s)\n({bench_label})')
-axes2[2].set_ylabel('seconds')
-for i, v in enumerate(lat_bench.values):
-    if not np.isnan(v):
-        axes2[2].text(i, v + 0.2, f'{v:.1f}s', ha='center', fontsize=9)
+    sub = sub.set_index('section').reindex(SCORE_COLS)
+    a_scores = sub['score_a'].values.astype(float)
+    b_scores = sub['score_b'].values.astype(float)
 
-fig2.suptitle(f'DQM Model Benchmarking — {RUN_ID} ({bench_label})',
-              fontsize=13, fontweight='bold')
-plt.tight_layout()
-out_png = f'eval_{RUN_ID}_benchmark.png'
-plt.savefig(out_png, dpi=150, bbox_inches='tight')
-plt.show()
-print(f'Saved: {out_png}')
+    x = np.arange(len(SCORE_COLS))
+    width = 0.35
+    fig, ax = plt.subplots(figsize=(9, 5.5))
+    bars_a = ax.bar(x - width / 2, a_scores, width, label=short_name(model_a), color='#4C72B0')
+    bars_b = ax.bar(x + width / 2, b_scores, width, label=short_name(model_b), color='#DD8452')
+    ax.set_xticks(x)
+    ax.set_xticklabels(SECTION_LABELS, rotation=15, ha='right', fontsize=9)
+    ax.set_ylim(0, 5.8)
+    ax.set_ylabel('Mean score (1–5)')
+    ax.legend()
+    for bars in (bars_a, bars_b):
+        for rect in bars:
+            h = rect.get_height()
+            if pd.notna(h):
+                ax.text(rect.get_x() + rect.get_width() / 2, h + 0.08, f'{h:.1f}',
+                        ha='center', fontsize=8)
 
-# %% ── Pairwise comparison plot ───────────────────────────────────────────────
-if not df_pairs.empty:
-    valid_pairs = [(a, b, lbl) for a, b, lbl in PAIRWISE
-                   if not df_eval[df_eval['model'] == a].empty
-                   and not df_eval[df_eval['model'] == b].empty]
+    overall_a = sub.loc['overall', 'score_a']
+    overall_b = sub.loc['overall', 'score_b']
+    wins_b = int((sub['score_b'] > sub['score_a']).sum())
+    wins_a = int((sub['score_a'] > sub['score_b']).sum())
 
-    if valid_pairs:
-        fig_p, axes_p = plt.subplots(1, len(valid_pairs),
-                                     figsize=(7 * len(valid_pairs), 5),
-                                     sharey=True)
-        if len(valid_pairs) == 1:
-            axes_p = [axes_p]
+    if pd.notna(overall_a) and pd.notna(overall_b) and overall_b > overall_a:
+        verdict = (f'{short_name(model_b)} performs better overall '
+                   f'(+{overall_b - overall_a:.2f} on "overall"; wins {wins_b}/{len(SCORE_COLS)} sections)')
+    elif pd.notna(overall_a) and pd.notna(overall_b) and overall_a > overall_b:
+        verdict = (f'{short_name(model_a)} performs better overall '
+                   f'(+{overall_a - overall_b:.2f} on "overall"; wins {wins_a}/{len(SCORE_COLS)} sections)')
+    else:
+        verdict = 'Models tie on overall score'
 
-        for ax, (model_a, model_b, label) in zip(axes_p, valid_pairs):
-            sub = df_pairs[df_pairs['comparison'] == label]
-            # Mean diff per section, averaged across variants
-            sec_diff = sub.groupby('section')['diff'].mean().reindex(SCORE_COLS)
+    ax.set_title(f'{label}\nA={short_name(model_a)}  B={short_name(model_b)}', fontsize=10, fontweight='bold')
+    fig.text(0.5, -0.04, verdict, ha='center', fontsize=9.5, style='italic')
 
-            bar_colors = ['#2ecc71' if v >= 0 else '#e74c3c' for v in sec_diff]
-            ax.barh(SECTION_LABELS, sec_diff.values, color=bar_colors)
-            ax.axvline(0, color='black', linewidth=0.8)
-            ax.set_title(label, fontsize=9, fontweight='bold')
-            ax.set_xlabel('Score difference (B − A)')
-            short_a = model_a.split(':')[0].replace('qwen3-vl-longctx', 'qwen3-longctx')
-            short_b = model_b.split(':')[0].replace('qwen3-vl-longctx', 'qwen3-longctx')
-            ax.set_title(f'{label}\nA={short_a}  B={short_b}', fontsize=8)
+    print(f'  {label}: {verdict}')
 
-        fig_p.suptitle('Pairwise score differences (green = B better, red = A better)',
-                        fontsize=11, fontweight='bold')
-        plt.tight_layout()
-        out_pair = f'eval_{RUN_ID}_pairwise.png'
-        plt.savefig(out_pair, dpi=150, bbox_inches='tight')
-        plt.show()
-        print(f'Saved: {out_pair}')
+    plt.tight_layout()
+    safe_label = re.sub(r'[^A-Za-z0-9_-]+', '_', label.replace(' ', '_')).strip('_')
+    out_pair = PAIRWISE_DIR / f'{safe_label}.png'
+    plt.savefig(out_pair, dpi=150, bbox_inches='tight')
+    plt.close(fig)
+    print(f'  Saved: {out_pair}')
