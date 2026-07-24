@@ -34,6 +34,7 @@ import json
 import os
 import re
 import time
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import numpy as np
@@ -396,23 +397,40 @@ def lookup_instruction(stem: str, store_dir: str | Path = "plot_instructions") -
 
 
 # ---------------------------------------------------------------------------
+# Config dataclasses
+# ---------------------------------------------------------------------------
+
+@dataclass
+class RAGConfig:
+    """Retrieval-Augmented Generation settings."""
+    backend: str = "local"
+    csv_path: str | Path | None = None
+    top_k: int = 5
+    method: str = "hybrid"
+    alpha: float = 0.5
+    score_threshold: float = 0.35
+    collection_ids: list[str] | None = field(default=None)
+
+
+@dataclass
+class ModelConfig:
+    """Model selection and inference settings."""
+    name: str = ""
+    image_token_budget: int | None = None  # Gemma 4 only; valid values: 70,140,280,560,1120
+
+
+# ---------------------------------------------------------------------------
 # Core query
 # ---------------------------------------------------------------------------
 
 def query(
     prompt: str,
     *,
-    model: str = "",
     system: str = "",
     reference_images: "list[str | Path] | str | Path | None" = None,
-    rag_backend: str = "local",
-    csv_path: str | Path | None = None,
-    top_k: int = 5,
-    method: str = "hybrid",
-    alpha: float = 0.5,
-    score_threshold: float = 0.35,
     image_path: str | Path | None = None,
-    collection_ids: list[str] | None = None,
+    rag: RAGConfig | None = None,
+    model: ModelConfig | None = None,
 ) -> dict:
     """
     Send a single query to OpenWebUI and return a result dict.
@@ -426,32 +444,27 @@ def query(
     Parameters
     ----------
     prompt           : User message text.
-    model            : Model ID. Falls back to OWUI_MODEL env var, then server default.
-    system           : Optional system prompt.
-    reference_images : Optional reference image(s). Accepts a single path or a list of
-                       paths (e.g. good + bad examples). Each is prepended to the message
-                       before the RAG context and input image.
-    rag_backend      : "local" (default) — retrieve from csv_path using retrieve_chunks.
-                       "owui"            — delegate retrieval to OWUI via collection_ids.
-    csv_path         : Path to document_chunks.csv. Required when rag_backend="local".
-    top_k            : Max chunks to retrieve (used by "hybrid" and "top_k" methods).
-    method           : Retrieval strategy — "hybrid" (default), "top_k", or "threshold".
-    alpha            : Hybrid only. Weight for vector scores (1-alpha to BM25).
-    score_threshold  : Threshold only. Minimum cosine similarity to include a chunk.
-    image_path       : Path to the input image to evaluate (requires a vision model).
-    collection_ids   : OWUI knowledge collection UUIDs. Required when rag_backend="owui".
+    model  : ModelConfig with .name and .image_token_budget.
+    system : Optional system prompt.
+    reference_images : Optional reference image(s) shown before RAG context.
+    image_path       : Path to the input image to evaluate.
+    rag    : RAGConfig controlling retrieval backend and parameters.
 
     Returns
     -------
-    dict with keys: prompt, image, reference_images, rag_backend, model_used, response, latency_s, error
+    dict with keys: prompt, image, reference_images, rag_backend, model_used,
+                    response, usage, latency_s, error
     """
-    if csv_path and collection_ids:
+    rag   = rag   or RAGConfig()
+    model = model or ModelConfig()
+
+    if rag.csv_path and rag.collection_ids:
         raise ValueError(
-            "csv_path and collection_ids are mutually exclusive. "
-            "Set rag_backend='local' with csv_path, or rag_backend='owui' with collection_ids."
+            "RAGConfig.csv_path and collection_ids are mutually exclusive. "
+            "Set backend='local' with csv_path, or backend='owui' with collection_ids."
         )
 
-    model = model or MODEL
+    model_name = model.name or MODEL
 
     # Normalise reference_images to a list of Path objects
     if reference_images is None:
@@ -466,17 +479,15 @@ def query(
     for ref in ref_list:
         content.append(_image_content_block(ref))
 
-    if rag_backend == "local" and csv_path:
-        # Use the plot folder name as the RAG query when available — more specific
-        # than the user prompt (which may be empty or generic).
+    if rag.backend == "local" and rag.csv_path:
         rag_query = Path(image_path).parent.name if image_path else prompt
         rag_context = retrieve_chunks(
-            rag_query, csv_path=csv_path, top_k=top_k,
-            method=method, alpha=alpha, score_threshold=score_threshold,
+            rag_query, csv_path=rag.csv_path, top_k=rag.top_k,
+            method=rag.method, alpha=rag.alpha, score_threshold=rag.score_threshold,
         )
         content.append({"type": "text", "text": f"Relevant instructions:\n\n{rag_context}"})
 
-    elif rag_backend == "yaml" and image_path:
+    elif rag.backend == "yaml" and image_path:
         stem = Path(image_path).parent.name
         instruction = lookup_instruction(stem)
         if instruction:
@@ -493,12 +504,14 @@ def query(
     messages.append({"role": "user", "content": content})
 
     payload: dict = {"messages": messages}
-    if model:
-        payload["model"] = model
-    if rag_backend == "owui" and collection_ids:
-        payload["files"] = [{"type": "collection", "id": cid} for cid in collection_ids]
+    if model_name:
+        payload["model"] = model_name
+    if model.image_token_budget is not None and "gemma-4" in model_name.lower():
+        payload["images_config"] = {"max_soft_tokens": model.image_token_budget}
+    if rag.backend == "owui" and rag.collection_ids:
+        payload["files"] = [{"type": "collection", "id": cid} for cid in rag.collection_ids]
 
-    if rag_backend == "owui":
+    if rag.backend == "owui":
         url, headers = f"{OWUI_URL}/api/chat/completions", _OWUI_HEADERS
     else:
         url, headers = f"{LITELLM_URL}/v1/chat/completions", _LITELLM_HEADERS
@@ -517,10 +530,11 @@ def query(
             "prompt":           prompt,
             "image":            str(image_path) if image_path else None,
             "reference_images": [str(r) for r in ref_list],
-            "rag_backend":      rag_backend,
-            "model_used":       data.get("model", model),
+            "rag_backend":      rag.backend,
+            "model_used":       data.get("model", model_name),
             "response":         data["choices"][0]["message"]["content"],
             "latency_s":        round(time.time() - t0, 2),
+            "usage":            data.get("usage"),
             "error":            None,
         }
     except Exception as e:
@@ -528,10 +542,11 @@ def query(
             "prompt":           prompt,
             "image":            str(image_path) if image_path else None,
             "reference_images": [str(r) for r in ref_list],
-            "rag_backend":      rag_backend,
-            "model_used":       model,
+            "rag_backend":      rag.backend,
+            "model_used":       model_name,
             "response":         None,
             "latency_s":        round(time.time() - t0, 2),
+            "usage":            None,
             "error":            str(e),
         }
 
@@ -607,19 +622,13 @@ def resolve_output_file(out_dir: Path, image_path: Path, model: str) -> Path:
 def batch_query_images(
     prompt: str,
     image_root: str | Path,
-    models: list[str],
+    models: "list[str | ModelConfig]",
     output_root: str | Path,
     *,
     run_id: str | None = None,
     system: str = "",
     ref_dir: str | Path | None = None,
-    rag_backend: str = "local",
-    csv_path: str | Path | None = None,
-    top_k: int = 5,
-    method: str = "hybrid",
-    alpha: float = 0.5,
-    score_threshold: float = 0.35,
-    collection_ids: list[str] | None = None,
+    rag: RAGConfig | None = None,
     extensions: tuple[str, ...] = (".png", ".jpg", ".jpeg", ".webp"),
     pairs: "list[tuple[str, Path]] | None" = None,
     delay: float = 1.0,
@@ -631,52 +640,47 @@ def batch_query_images(
 
     Parameters
     ----------
-    prompt          : Prompt sent with every image.
-    image_root      : Root folder containing per-plot subdirectories.
-    models          : List of model IDs to iterate over.
-    output_root     : Root folder for results.
-    run_id          : Optional string tag (e.g. 'v1', 'baseline').
-                      If given, all outputs land under <output_root>/<run_id>/
-                      so previous runs are preserved.
-                      If None (default), outputs overwrite previous results.
-    system          : Optional system prompt applied to all queries.
-    ref_dir         : Optional ref_images root. For each input image,
-                      find_reference_images() returns all matching reference files
-                      (good, bad, cosmics variants). Leave None to send no references.
-    rag_backend     : "local" (default) — use csv_path with retrieve_chunks.
-                      "owui"            — delegate to OWUI via collection_ids.
-    csv_path        : Path to document_chunks.csv. Required when rag_backend="local".
-    top_k           : Number of chunks to retrieve from csv_path.
-    method          : Retrieval strategy — "hybrid" (default), "top_k", or "threshold".
-    alpha           : Hybrid only. Weight for vector scores (1-alpha to BM25).
-    score_threshold : Threshold only. Minimum cosine similarity to include a chunk.
-    collection_ids  : OWUI knowledge collection UUIDs. Required when rag_backend="owui".
-    extensions      : Image file extensions to include.
-    pairs           : Pre-built (plot_name, image_path) pairs. When provided,
-                      image_root is not scanned — use this to pass a pre-filtered
-                      list from the notebook. None (default) collects from image_root.
-    delay           : Seconds to sleep between API calls.
-    verbose         : Print progress to stdout.
+    prompt     : Prompt sent with every image.
+    image_root : Root folder containing per-plot subdirectories.
+    models     : List of model IDs (str) or ModelConfig objects.
+    output_root: Root folder for results.
+    run_id     : Optional string tag (e.g. 'v1', 'baseline').
+                 If given, outputs land under <output_root>/<run_id>/.
+                 If None (default), outputs overwrite previous results.
+    system     : Optional system prompt applied to all queries.
+    ref_dir    : Optional ref_images root. find_reference_images() returns all
+                 matching reference files. Leave None to send no references.
+    rag        : RAGConfig controlling retrieval backend and parameters.
+    extensions : Image file extensions to include.
+    pairs      : Pre-built (plot_name, image_path) pairs; skips image_root scan.
+    delay      : Seconds to sleep between API calls.
+    verbose    : Print progress to stdout.
 
     Returns
     -------
     List of result dicts, one per (model, plot_name, image) combination.
-    Each dict has keys: plot_name, image, reference_images, model_used, response, latency_s, error.
     """
     image_root  = Path(image_root)
     output_root = Path(output_root)
     ref_dir     = Path(ref_dir) if ref_dir else None
+    rag         = rag or RAGConfig()
 
     if pairs is None:
         pairs = _collect_images(image_root, extensions)
     if not pairs:
         raise FileNotFoundError(f"No images found under {image_root}")
 
-    total = len(models) * len(pairs)
+    # Normalise models to ModelConfig objects
+    model_configs = [
+        m if isinstance(m, ModelConfig) else ModelConfig(name=m)
+        for m in models
+    ]
+
+    total = len(model_configs) * len(pairs)
     results: list[dict] = []
     n = 0
 
-    for model in models:
+    for model_cfg in model_configs:
         for plot_name, image_path in pairs:
             n += 1
 
@@ -685,31 +689,25 @@ def batch_query_images(
             if verbose:
                 ref_label = ", ".join(r.name for r in refs) if refs else "none"
                 print(
-                    f"[{n}/{total}] model={model}  "
+                    f"[{n}/{total}] model={model_cfg.name}  "
                     f"plot={plot_name}  image={image_path.name}  refs=[{ref_label}] ...",
                     end=" ", flush=True,
                 )
 
             result = query(
                 prompt,
-                model=model,
+                model=model_cfg,
                 system=system,
                 reference_images=refs,
-                rag_backend=rag_backend,
-                csv_path=csv_path,
-                top_k=top_k,
-                method=method,
-                alpha=alpha,
-                score_threshold=score_threshold,
+                rag=rag,
                 image_path=image_path,
-                collection_ids=collection_ids,
             )
             result["plot_name"] = plot_name
             results.append(result)
 
             out_dir = resolve_output_dir(output_root, plot_name, run_id)
             out_dir.mkdir(parents=True, exist_ok=True)
-            out_file = resolve_output_file(out_dir, image_path, model)
+            out_file = resolve_output_file(out_dir, image_path, model_cfg.name)
 
             with open(out_file, "w") as f:
                 f.write(f"Model:      {result['model_used']}\n")
