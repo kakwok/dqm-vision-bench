@@ -53,7 +53,7 @@ OWUI_URL = os.environ.get("OWUI_URL", "https://openwebui.fnal.gov/").rstrip("/")
 LITELLM_API_KEY = os.environ.get("LITELLM_API_KEY", "")
 LITELLM_URL     = os.environ.get("LITELLM_URL", "").rstrip("/")
 MODEL    = os.environ.get("OWUI_MODEL", "")
-TIMEOUT  = int(os.environ.get("OWUI_TIMEOUT", "120"))
+TIMEOUT  = int(os.environ.get("OWUI_TIMEOUT", "400"))
 
 if not OWUI_API_KEY:
     raise EnvironmentError("OWUI_API_KEY not set -  needed for knowledge/RAG access.")
@@ -431,9 +431,10 @@ def query(
     image_path: str | Path | None = None,
     rag: RAGConfig | None = None,
     model: ModelConfig | None = None,
+    no_think: bool = False,
 ) -> dict:
     """
-    Send a single query to OpenWebUI and return a result dict.
+    Send a single query and return a result dict.
 
     The user message is built in four ordered parts:
       1. reference_images — zero or more reference images shown before context
@@ -444,16 +445,19 @@ def query(
     Parameters
     ----------
     prompt           : User message text.
-    model  : ModelConfig with .name and .image_token_budget.
-    system : Optional system prompt.
+    model            : ModelConfig with .name and .image_token_budget.
+    system           : Optional system prompt.
     reference_images : Optional reference image(s) shown before RAG context.
     image_path       : Path to the input image to evaluate.
-    rag    : RAGConfig controlling retrieval backend and parameters.
+    rag              : RAGConfig controlling retrieval backend and parameters.
+    no_think         : Append /no_think to prompt and system (Qwen3 thinking models).
 
     Returns
     -------
-    dict with keys: prompt, image, reference_images, rag_backend, model_used,
-                    response, usage, latency_s, error
+    dict with keys: prompt, image, reference_images, rag_backend,
+                    model (requested), model_used (echoed by backend),
+                    response, usage, load_latency_s, generation_latency_s,
+                    latency_s, error
     """
     rag   = rag   or RAGConfig()
     model = model or ModelConfig()
@@ -465,6 +469,12 @@ def query(
         )
 
     model_name = model.name or MODEL
+
+    # Must run before building content so /no_think reaches the payload.
+    if no_think:
+        prompt = f"{prompt}\n/no_think"
+        if system:
+            system = f"{system}\n/no_think"
 
     # Normalise reference_images to a list of Path objects
     if reference_images is None:
@@ -503,7 +513,7 @@ def query(
         messages.append({"role": "system", "content": system})
     messages.append({"role": "user", "content": content})
 
-    payload: dict = {"messages": messages}
+    payload: dict = {"messages": messages, "stream": True}
     if model_name:
         payload["model"] = model_name
     if model.image_token_budget is not None and "gemma-4" in model_name.lower():
@@ -517,37 +527,71 @@ def query(
         url, headers = f"{LITELLM_URL}/v1/chat/completions", _LITELLM_HEADERS
 
     t0 = time.time()
+    t_first_token = None
+    full_response = ""
+    usage = None
+
     try:
-        r = requests.post(
-            url,
-            headers=headers,
-            json=payload,
-            timeout=TIMEOUT,
-        )
-        r.raise_for_status()
-        data = r.json()
+        with requests.post(url, headers=headers, json=payload,
+                           timeout=TIMEOUT, stream=True) as r:
+            r.raise_for_status()
+            model_used = model_name
+            for line in r.iter_lines():
+                if not line:
+                    continue
+                if not line.startswith(b"data: "):
+                    continue
+                data = line[6:]
+                if data == b"[DONE]":
+                    break
+                try:
+                    chunk = json.loads(data)
+                except json.JSONDecodeError:
+                    continue
+                if t_first_token is None:
+                    t_first_token = time.time()
+                # The backend may echo a different model name than requested
+                # (e.g. Ollama resolving a Modelfile alias to its base tag).
+                # Keep this for diagnostics only; use model_name for filenames.
+                model_used = chunk.get("model", model_used)
+                if "usage" in chunk:
+                    usage = chunk["usage"]
+                choices = chunk.get("choices", [])
+                if choices:
+                    delta = choices[0].get("delta", {}).get("content", "")
+                    if delta:
+                        full_response += delta
+
+        t_end = time.time()
+        ttft = round(t_first_token - t0, 2) if t_first_token else None
         return {
-            "prompt":           prompt,
-            "image":            str(image_path) if image_path else None,
-            "reference_images": [str(r) for r in ref_list],
-            "rag_backend":      rag.backend,
-            "model_used":       data.get("model", model_name),
-            "response":         data["choices"][0]["message"]["content"],
-            "latency_s":        round(time.time() - t0, 2),
-            "usage":            data.get("usage"),
-            "error":            None,
+            "prompt":               prompt,
+            "image":                str(image_path) if image_path else None,
+            "reference_images":     [str(r) for r in ref_list],
+            "rag_backend":          rag.backend,
+            "model":                model_name,
+            "model_used":           model_used,
+            "response":             full_response,
+            "usage":                usage,
+            "load_latency_s":       ttft,
+            "generation_latency_s": round(t_end - t_first_token, 2) if t_first_token else None,
+            "latency_s":            round(t_end - t0, 2),
+            "error":                None,
         }
     except Exception as e:
         return {
-            "prompt":           prompt,
-            "image":            str(image_path) if image_path else None,
-            "reference_images": [str(r) for r in ref_list],
-            "rag_backend":      rag.backend,
-            "model_used":       model_name,
-            "response":         None,
-            "latency_s":        round(time.time() - t0, 2),
-            "usage":            None,
-            "error":            str(e),
+            "prompt":               prompt,
+            "image":                str(image_path) if image_path else None,
+            "reference_images":     [str(r) for r in ref_list],
+            "rag_backend":          rag.backend,
+            "model":                model_name,
+            "model_used":           model_name,
+            "response":             None,
+            "usage":                None,
+            "load_latency_s":       None,
+            "generation_latency_s": None,
+            "latency_s":            round(time.time() - t0, 2),
+            "error":                str(e),
         }
 
 
@@ -633,6 +677,7 @@ def batch_query_images(
     pairs: "list[tuple[str, Path]] | None" = None,
     delay: float = 1.0,
     verbose: bool = True,
+    prompt_map: "dict[Path, str] | None" = None,
 ) -> list[dict]:
     """
     Iterate over all images in <image_root>/<plotName>/ × each model and
@@ -655,6 +700,9 @@ def batch_query_images(
     pairs      : Pre-built (plot_name, image_path) pairs; skips image_root scan.
     delay      : Seconds to sleep between API calls.
     verbose    : Print progress to stdout.
+    prompt_map : Optional {image_path: prompt} dict for per-image prompts
+                 (e.g. built from run number → event type). Takes precedence
+                 over the static `prompt` argument.
 
     Returns
     -------
@@ -685,6 +733,7 @@ def batch_query_images(
             n += 1
 
             refs = find_reference_images(image_path, ref_dir) if ref_dir is not None else []
+            resolved_prompt = prompt_map[image_path] if prompt_map and image_path in prompt_map else prompt
 
             if verbose:
                 ref_label = ", ".join(r.name for r in refs) if refs else "none"
@@ -695,7 +744,7 @@ def batch_query_images(
                 )
 
             result = query(
-                prompt,
+                resolved_prompt,
                 model=model_cfg,
                 system=system,
                 reference_images=refs,
@@ -710,13 +759,15 @@ def batch_query_images(
             out_file = resolve_output_file(out_dir, image_path, model_cfg.name)
 
             with open(out_file, "w") as f:
-                f.write(f"Model:      {result['model_used']}\n")
+                f.write(f"Model:      {result['model']}\n")
                 f.write(f"Plot:       {plot_name}\n")
                 f.write(f"Image:      {result['image']}\n")
                 refs_str = ", ".join(Path(r).name for r in result["reference_images"])
                 f.write(f"References: {refs_str or '(none)'}\n")
                 f.write(f"Run ID:     {run_id or '(overwrite)'}\n")
-                f.write(f"Latency:    {result['latency_s']}s\n")
+                f.write(f"Load latency:       {result['load_latency_s']}s\n")
+                f.write(f"Generation latency: {result['generation_latency_s']}s\n")
+                f.write(f"Total latency:      {result['latency_s']}s\n")
                 f.write(f"Prompt:     {result['prompt']}\n")
                 f.write("-" * 60 + "\n")
                 if result["error"]:
