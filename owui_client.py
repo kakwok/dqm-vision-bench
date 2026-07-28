@@ -193,58 +193,36 @@ class ModelConfig:
 
 
 # ---------------------------------------------------------------------------
-# Core query
+# Core query — two-stage: build then send
 # ---------------------------------------------------------------------------
 
-def query(
+def build_messages(
     prompt: str,
     *,
     system: str = "",
     reference_images: "list[str | Path] | str | Path | None" = None,
     image_path: str | Path | None = None,
     context: "ContextBackend | None" = None,
-    model: "ModelConfig | None" = None,
-    no_think: bool = False,
 ) -> dict:
     """
-    Send a single query and return a result dict.
+    Assemble the API message list without sending anything.
 
-    The user message is built in four ordered parts:
-      1. reference_images — zero or more reference images shown before context
-      2. RAG context      — retrieved text from the chosen backend
-      3. image_path       — the input image to evaluate
-      4. prompt           — the text instruction
+    Returns a spec dict with keys:
+        prompt          — original prompt text
+        system          — system prompt (may be empty)
+        messages        — list ready for the API payload
+        ref_list        — resolved reference image paths (list[Path])
+        img_path        — resolved input image path (Path | None)
+        rag_text        — retrieved context string; empty string if none
+        context         — resolved ContextBackend (NoContext() if None was passed)
 
-    Parameters
-    ----------
-    prompt           : User message text.
-    model            : ModelConfig with .name and .image_token_budget.
-    system           : Optional system prompt.
-    reference_images : Optional reference image(s) shown before RAG context.
-    image_path       : Path to the input image to evaluate.
-    context          : ContextBackend controlling retrieval (LocalRAG, YAMLContext,
-                       OWUIContext, NoContext). Defaults to NoContext.
-    no_think         : Append /no_think to prompt and system (Qwen3 thinking models).
-
-    Returns
-    -------
-    dict with keys: prompt, image, reference_images, rag_backend,
-                    model (requested), model_used (echoed by backend),
-                    response, usage, load_latency_s, generation_latency_s,
-                    latency_s, error
+    Use send_query() to send the spec, or inspect it first:
+        spec = build_messages(PROMPT, image_path=img, context=CONTEXT)
+        print(spec['rag_text'])
+        result = send_query(spec, model=ModelConfig(name='...'))
     """
     context = context or NoContext()
-    model   = model   or ModelConfig()
 
-    model_name = model.name or MODEL
-
-    # Must run before building content so /no_think reaches the payload.
-    if no_think:
-        prompt = f"{prompt}\n/no_think"
-        if system:
-            system = f"{system}\n/no_think"
-
-    # Normalise reference_images to a list of Path objects
     if reference_images is None:
         ref_list: list[Path] = []
     elif isinstance(reference_images, (str, Path)):
@@ -254,25 +232,58 @@ def query(
 
     img_path = Path(image_path) if image_path else None
 
-    content = []
+    rag_text = retrieve_context(context, image_path=img_path, prompt=prompt)
 
+    content = []
     for ref in ref_list:
         content.append(_image_content_block(ref))
-
-    rag_text = retrieve_context(context, image_path=img_path, prompt=prompt)
     if rag_text:
         label = "Instructions" if isinstance(context, YAMLContext) else "Relevant instructions"
         content.append({"type": "text", "text": f"{label}:\n\n{rag_text}"})
-
     if img_path:
         content.append(_image_content_block(img_path))
-
     content.append({"type": "text", "text": prompt})
 
     messages = []
     if system:
         messages.append({"role": "system", "content": system})
     messages.append({"role": "user", "content": content})
+
+    return {
+        "prompt":   prompt,
+        "system":   system,
+        "messages": messages,
+        "ref_list": ref_list,
+        "img_path": img_path,
+        "rag_text": rag_text,
+        "context":  context,
+    }
+
+
+def send_query(spec: dict, *, model: "ModelConfig | None" = None) -> dict:
+    """
+    Send a pre-built message spec and return a result dict.
+
+    Parameters
+    ----------
+    spec  : Dict returned by build_messages().
+    model : ModelConfig with .name and .image_token_budget.
+
+    Returns
+    -------
+    dict with keys: prompt, image, reference_images, rag_backend,
+                    model (requested), model_used (echoed by backend),
+                    response, usage, load_latency_s, generation_latency_s,
+                    latency_s, error
+    """
+    model = model or ModelConfig()
+
+    context    = spec["context"]
+    messages   = spec["messages"]
+    ref_list   = spec["ref_list"]
+    img_path   = spec["img_path"]
+    prompt     = spec["prompt"]
+    model_name = model.name or MODEL
 
     payload: dict = {"messages": messages, "stream": True}
     if model_name:
@@ -354,6 +365,26 @@ def query(
             "latency_s":            round(time.time() - t0, 2),
             "error":                str(e),
         }
+
+
+def query(
+    prompt: str,
+    *,
+    system: str = "",
+    reference_images: "list[str | Path] | str | Path | None" = None,
+    image_path: str | Path | None = None,
+    context: "ContextBackend | None" = None,
+    model: "ModelConfig | None" = None,
+) -> dict:
+    """Convenience wrapper: build_messages() then send_query()."""
+    spec = build_messages(
+        prompt,
+        system=system,
+        reference_images=reference_images,
+        image_path=image_path,
+        context=context,
+    )
+    return send_query(spec, model=model)
 
 
 # ---------------------------------------------------------------------------
