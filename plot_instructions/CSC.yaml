@@ -1,0 +1,125 @@
+version: '1.0'
+subsystem: CSC
+plots:
+  CSC_00_ChamberStatusStatisticallySignificant:
+    plot_number: '00'
+    folder: CSC_00_ChamberStatusStatisticallySignificant
+    title: Chamber Status (Statistically Significant)
+    instruction: |-
+      GOOD : (click - enlarge; dblclick - back)
+
+      BAD : (click - enlarge; dblclick - back)
+
+      Description: aggregated status for CSC chambers. Evaluation: white and green chambers are just OK (left picture). Red ones mean some error that should be investigated (right picture). Action items: If anything appears RED, shifter should check other histograms in Shifter Layout to drill down chamber problem. Please mark CSC subsystem as GOOD if >= 75% of chambers are not RED. Otherwise - mark as BAD. Status is clearly seen in the histogram status box (top right), percentage of GOOD chambers is displayed on histogram title.
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  CSC_01_ChamberOccupancyExceptionsStatisticallySignificant:
+    plot_number: '01'
+    folder: CSC_01_ChamberOccupancyExceptionsStatisticallySignificant
+    title: Chamber Occupancy Exceptions (Statistically Significant)
+    instruction: |-
+      GOOD : (click - enlarge; dblclick - back)
+
+      BAD : (click - enlarge; dblclick - back)
+
+      Description: occupancy exceptions histogram is based on reference histogram. Ideally this histogram should be empty (left picture). "Hot" chambers (marked red) show chambers that report data too frequent comparing with reference histogram distributions. "Cold" ones (marked blue, right picture) report data too rare. Action items: if you observe HOT (red) or COLD (blue) chambers please add appropriate comment for the subsystem. I.e. for the right picture shifter should add a description "5 cold chambers, ME-3/2/13 hot chamber".
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  CSC_02_ChamberErrorsandWarningsStatisticallySignificant:
+    plot_number: '02'
+    folder: CSC_02_ChamberErrorsandWarningsStatisticallySignificant
+    title: Chamber Errors and Warnings (Statistically Significant)
+    instruction: |-
+      GOOD : (click - enlarge; dblclick - back)
+
+      GOOD with Errors: (click - enlarge; dblclick - back)
+
+      Description: displays chambers that have format errors (in red). Action items: if you observe any red chamber please add a comment for the subsystem, i.e. "format errors".
+
+      Description: displays chambers that have L1 trigger out of sync (in red). Action items: if you observe any red chamber please add a comment for the subsystem, i.e. for the right picture shifter should add a description "L1 out of sync".
+
+      Description: displays chambers that report FIFO-FULL condition on DMB inputs. Action items: if you observe any red chamber please add a comment for the subsystem, i.e. "DMB fifo full".
+
+      Description: displays chambers that report TIMEOUT condition on DMB inputs. Action items: if you observe any red chamber please add a comment for the subsystem, i.e. "DMB timeout".
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  CSC_03_ChamberswithoutDataStatisticallySignificant:
+    plot_number: '03'
+    folder: CSC_03_ChamberswithoutDataStatisticallySignificant
+    title: Chambers without Data (Statistically Significant)
+    instruction: |-
+      GOOD : (click - enlarge; dblclick - back)
+
+      GOOD with Errors: (click - enlarge; dblclick - back)
+
+      Description: shows chambers without ALCT data. Ideally histogram should appear empty (left picture). Action items: if you observe any red chamber please add a comment for the subsystem, i.e. for the right picture shifter should add a description "missing ALCTs".
+
+      Description: shows chambers without CLCT data. Ideally histogram should appear empty (left picture). Action items: if you observe any red chamber please add a comment for the subsystem, i.e. for the right picture shifter should add a description "missing CLCTs".
+
+      Description: shows chambers without CFEB data. Ideally histogram should appear empty (left picture). Action items: if you observe any red chamber please add a comment for the subsystem, i.e. for the right picture shifter should add a description "missing CFEBs".
+
+      Description: shows occurrences when SCA cells were filled due to too-high rate of LCTs and/or LCT�L1A coincidences. Ideally histogram should appear empty (left picture). Action items: if you observe any red chamber please add a comment for the subsystem, i.e. "CFEB B-Words".
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  CSC_04_PhysicsEfficiencyRecHitsMinus:
+    plot_number: '04'
+    folder: CSC_04_PhysicsEfficiencyRecHitsMinus
+    title: Rechit Occupancies
+    instruction: |-
+      CSC rechits are reconstructed in each layer of a chamber as 2-dim points (x,y). These occupancy plots show these points binned into a scatterplot for each of the 4 stations in each endcap. (Since each chamber has 6 layers, multiple layers are overlaid in each scatterplot). A typical high-statistics pp collisions run from 2018 is shown at the top of this page. It shows two chambers not providing rechits: ME-2/1/03 and ME-4/2/21. These were known 'bad chambers' which did not provide rechits for the entire rum. They appears as white cells in the 'Status' plot and as white wedge-shaped gaps in the 'Rechits' plots.
+
+      The following plots show example rechit distributions for some cosmic runs, and for some collisions runs with unusual hardware problems.
+
+      If there is any significant issue with a chamber, rechits will not be reconstructed and gaps will appear. Some fluctuation is normal, and small radial gaps will come and go as electronic channel issues appear, and then are fixed. Only large-scale problems are a concern. Note that is a chamber is not functioning then there will be a trapezoidal gap in the plots (e.g. see the two missing chambers in the plot at the top of the page.) If you are unsure whether this is an already recognized problem, please consult with central DCS shifter and the CSC DOC. There may be wedges (multiple CSCs) missing in the occupancy plots, due to unpowered peripheral crates corresponding to CSC trigger sectors. Check with the DCS shifter or the CSC DOC to ensure the missing wedges correspond to peripheral crates in the 'OFF' state.
+
+      GOOD (click to zoom in; double-click to revert)
+
+      Description: Typical cosmic run taken between fills during normal 2018 running. Comments: the large-scale patterns of higher density of hits in the 'bottom' of each station, and lower in the 'top' is due to triggering on the bottom of the muon detectors. This is done so that the triggering cosmic muons have the same approximate direction as muons produced from pp collisions at the IP, so the timing is similar to that from triggered IP muons.
+
+      Description: A CRUZET cosmic run when triggered on bottom. Comments: the large-scale patterns of higher density of hits in the 'bottom' of each station, and lower in the 'top' is due to triggering on the bottom of the muon detectors.
+
+      Description: A CRUZET cosmic run when triggered on all-phi. Comments: the large-scale patterns of higher density of hits in the 'top' of each station is characteristic of the higher flux of cosmics reaching the top of the detector. When triggering on all phi we thus see the natural distribution of cosmic ray muons.
+
+      BAD (click to zoom in; double-click to revert)
+
+      Description: A normal pp collisions run in 2018 with a bad VME crate Comments: A bad VME crate caused 9 chambers - a wedge in ME-1 rings 1, 2, 3 - to have no rechits. This is an issue which should be reported.
+
+      Description: A normal pp collisions run in 2018 with a HV master board failure Comments: A bad HV master board caused several chambers in ME-4/1 to have no rechits, usually two adjacent chambers are affected at once. This is an issue which should be reported.
+
+      Description: RecHits inefficiency, caused by EMTF trigger sector issue Comments: In these specific plots, the EMTF Trigger Sector +5 issue was causing CSC readout and rechits inefficiency. This is an issue which should be reported. In the future, a problem like this can affect any or multiple sectors. Notice there is a 'sharp line' that forms the wedge of low efficiency, which is telling of a hardware issue (as opposed to a special trigger key). In case a sector is missing, please call CSC DOC.
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  CSC_05_PhysicsEfficiencyRecHitsPlus:
+    plot_number: '05'
+    folder: CSC_05_PhysicsEfficiencyRecHitsPlus
+    title: Rechit Occupancies
+    instruction: |-
+      CSC rechits are reconstructed in each layer of a chamber as 2-dim points (x,y). These occupancy plots show these points binned into a scatterplot for each of the 4 stations in each endcap. (Since each chamber has 6 layers, multiple layers are overlaid in each scatterplot). A typical high-statistics pp collisions run from 2018 is shown at the top of this page. It shows two chambers not providing rechits: ME-2/1/03 and ME-4/2/21. These were known 'bad chambers' which did not provide rechits for the entire rum. They appears as white cells in the 'Status' plot and as white wedge-shaped gaps in the 'Rechits' plots.
+
+      The following plots show example rechit distributions for some cosmic runs, and for some collisions runs with unusual hardware problems.
+
+      If there is any significant issue with a chamber, rechits will not be reconstructed and gaps will appear. Some fluctuation is normal, and small radial gaps will come and go as electronic channel issues appear, and then are fixed. Only large-scale problems are a concern. Note that is a chamber is not functioning then there will be a trapezoidal gap in the plots (e.g. see the two missing chambers in the plot at the top of the page.) If you are unsure whether this is an already recognized problem, please consult with central DCS shifter and the CSC DOC. There may be wedges (multiple CSCs) missing in the occupancy plots, due to unpowered peripheral crates corresponding to CSC trigger sectors. Check with the DCS shifter or the CSC DOC to ensure the missing wedges correspond to peripheral crates in the 'OFF' state.
+
+      GOOD (click to zoom in; double-click to revert)
+
+      Description: Typical cosmic run taken between fills during normal 2018 running. Comments: the large-scale patterns of higher density of hits in the 'bottom' of each station, and lower in the 'top' is due to triggering on the bottom of the muon detectors. This is done so that the triggering cosmic muons have the same approximate direction as muons produced from pp collisions at the IP, so the timing is similar to that from triggered IP muons.
+
+      Description: A CRUZET cosmic run when triggered on bottom. Comments: the large-scale patterns of higher density of hits in the 'bottom' of each station, and lower in the 'top' is due to triggering on the bottom of the muon detectors.
+
+      Description: A CRUZET cosmic run when triggered on all-phi. Comments: the large-scale patterns of higher density of hits in the 'top' of each station is characteristic of the higher flux of cosmics reaching the top of the detector. When triggering on all phi we thus see the natural distribution of cosmic ray muons.
+
+      BAD (click to zoom in; double-click to revert)
+
+      Description: A normal pp collisions run in 2018 with a bad VME crate Comments: A bad VME crate caused 9 chambers - a wedge in ME-1 rings 1, 2, 3 - to have no rechits. This is an issue which should be reported.
+
+      Description: A normal pp collisions run in 2018 with a HV master board failure Comments: A bad HV master board caused several chambers in ME-4/1 to have no rechits, usually two adjacent chambers are affected at once. This is an issue which should be reported.
+
+      Description: RecHits inefficiency, caused by EMTF trigger sector issue Comments: In these specific plots, the EMTF Trigger Sector +5 issue was causing CSC readout and rechits inefficiency. This is an issue which should be reported. In the future, a problem like this can affect any or multiple sectors. Notice there is a 'sharp line' that forms the wedge of low efficiency, which is telling of a hardware issue (as opposed to a special trigger key). In case a sector is missing, please call CSC DOC.
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser

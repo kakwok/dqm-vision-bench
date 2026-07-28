@@ -1,0 +1,27 @@
+version: '1.0'
+subsystem: RPC
+plots:
+  RPC_00_RPCReportSummary:
+    plot_number: '00'
+    folder: RPC_00_RPCReportSummary
+    title: RPC Report Summary
+    instruction: |-
+      Description: It shows the summary of the status of the RPC system on the wheel vs sector (eta vs phi) plane. The percentage represents the fraction of rolls (chamber eta partition) active in the readout, the color code is: green: status = [95-100]% yellow: status = [85-95]% orange: status = [30-85]% red: status = [0-30]% and white: not in readout. Please note, this histogram simply gives the fraction of working detector. IT IS NOT A MEASUREMENT OF DETECTOR EFFICIENCY.
+
+      Action required: (To find the average per every wheel and disk please go to Workspace = Reports and click on RPC) For COLLISIONS a run is GOOD if in the summary report the average for every wheel is greater than: Wheel-1 34% Wheel-2 40% Wheel0 46% Wheel1 63% Wheel2 78% And for the disks, the average for every disk is greater than 90%. For COSMIC runs check only the quality percentage assigned to each Wheel (please ignore the cells with information about the Disks). (To find the average per every wheel and disk please go to Workspace = Reports and click on RPC) Please note that it is normal to see at the beginning of the run (or for short runs) red and orange for the wheels. So, if one wheel have values lower than the following (and the number of lumisections is greater than 200) Wheel-1 34% Wheel-2 40% Wheel0 46% Wheel1 63% Wheel2 78% send and email to cms-dpg-conveners-rpc@cern.ch and cms-rpc-runcoord@cern.ch. Please Do NOT mark the run as BAD. Important Note 1: Don't trust the histogram when everything is green (only 1's). That means the statistics is too low (usually at the beginning of the run or due to special run conditions). In that case you should wait for values other than 1 to begin to appear. Important Note 2: If everything is red (and the number of lumisections is greater than 200) perhaps it is because the RPCs are not ON. In that case please ignore the histogram. Important Note 3: If everything is red (and the number of lumisections is greater than 200) perhaps it may be that the conditions of the run are special, for example that the number of colliding bunches is small or that there are no stable beams, van der Meer scan, etc. This information can be found in oms in the fill information, for example for fill: 10298 [1], the number of colliding bunches is 120 [2], instead of the usual number for pp collisions (>2300) then the histogram will be red even with more than 700 lumisections. In that case please ignore the histogram. [1] https://cmsoms.cern.ch/cms/fills/report?cms_fill=10298 [2] Filling Scheme: 525ns_122b_120_48_40_4bpi_32inj_bs800ns_VdMppref Important Note 4: Please ignore the histogram 01-Noisy_summary_Map.
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  RPC_04_RPCOccupancy:
+    plot_number: '04'
+    folder: RPC_04_RPCOccupancy
+    title: RPC_Occupancy
+    instruction: |-
+      Description: Occupancy per sector. Each of the histograms represents a different RPC region, i.e. Barrel, and Endcaps.
+
+      Relevant Values: Uniform values among neighboring bins. Please note that Wheel -1 Sector 10 does not have any chamber working (normally a sector has 8 operational chambers), so it is normal that the occupancy is empty for this sector.
+
+      Action required: If you find any empty cell (with exception of Wheel -1 Sector 10) and the number of lumisections is higher than 200, please send an email reporting such a case to cms-dpg-conveners-rpc@cern.ch and cms-rpc-runcoord@cern.ch. For lower number of lumisections is possible to have empty cells, in particular with runs with less than 50 lumisections. In the example below, there 24 cells empty for the barrel plot. In case of Collision runs check if there are bins that have values significantly higher or lower (at least a factor 20) than neighboring bins, if yes, please send an email to to cms-dpg-conveners-rpc@cern.ch and cms-rpc-runcoord@cern.ch reporting the cases. For COSMIC runs, high inhomogeneity of the occupancy is expected. Vertical Barrel ( sectors 1 and 7) and all Endcap sectors a expected to have significantly lower statistic compared to horizontal Barrel sectors (Sector 4 and 10).
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser

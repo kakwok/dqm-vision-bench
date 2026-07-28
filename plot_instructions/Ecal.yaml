@@ -1,0 +1,198 @@
+version: '1.0'
+subsystem: Ecal
+plots:
+  Ecal_00_Summary:
+    plot_number: '00'
+    folder: Ecal_00_Summary
+    title: Summary
+    instruction: |-
+      Description: At-a-glance quality plot summarizing the quality of the following PHYSICS plots below: (01 FE Status, 02 Integrity, 04 Noise, 06 Timing, 07 Trigger Primitives, 08 Hot Cell). Expect all to be GREEN indicating no quality issues. A RED cluster indicates a potential issue in one or more of the mentioned PHYSICS quality plots below. Known Issues: Refer to individual PHYSICS quality plots. During Stable Beams, these plots are sprinkled with red channels, especially in the Endcap. This is a known issue that comes from 04 Noise: there is no need to contact ECAL DOC. Action Item: If RED clusters are seen, identify which of the PHYSICS quality plot(s) below are causing it.
+
+      GOOD :
+
+      BAD :
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  Ecal_01_FEStatus:
+    plot_number: '01'
+    folder: Ecal_01_FEStatus
+    title: FE Status
+    instruction: |-
+      Description: This PHYSICS quality plot describes the status of the Front-End (FE) electronics in the unpacked RAW data. A RED cluster indicates an error status was returned by the FE chips. Typically, Single Event Upsets (SEUs) can cause isolated FEs to go into error and display RED. These are automatically recovered by DAQ resyncs within a few seconds but will continue to display RED in this plot. As such, a few isolated red FEs are OK and part of normal operation during collisions. Larger clusters of FEs going RED (see BAD reference plot), however, indicate a potentially more serious problem with the FE electronics. Known Issues: Some FEs are known to be more susceptible to SEUs than others. The permanently problematic ones appear as DARK RED to indicate these are known issues which can be ignored. However, several FEs which are only problematic sometimes are not masked and so can intermittently appear as isolated RED FEs. As long as they are not clumped together, these can also be ignored. During RAMP, EB-14 is known to display several red channels: these can also be ignored. Action Item: If you see RED clusters of more than 2 FEs (see BAD reference plot), contact the ECAL DOC. If blue clusters do not appear in the corresponding By Lumisection plot, only write an elog and inform ECAL DOC on Mattermost without calling.
+
+      GOOD :
+
+      BAD :
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  Ecal_02_Integrity:
+    plot_number: '02'
+    folder: Ecal_02_Integrity
+    title: Integrity
+    instruction: |-
+      Description: This PHYSICS quality plot describes the integrity of the RAW data. A RED cluster indicates potential readout problems, SEUs, Token Ring failures, or Desynchronization errors. Known Issues: Problems with the unpacker in EB-11 or EE+04 can cause widespread desynchronization errors. In this case, the entire Super Module will display RED: immediately call the ECAL DOC. Action Item: For isolated RED CCUs/TTs, it is enough to add it to your summary elog. In case of clusters, if blue clusters do not appear in the corresponding By Lumisection plot, only write an elog and inform ECAL DOC on Mattermost without calling. If the clusters are persistent, ask SL to try manual DAQ TTCresynch, write an elog and inform the ECAL DOC on Mattermost without calling. If the clusters still appear in the By Lumisection plots after TTCresync, call the ECAL DOC.
+
+      GOOD :
+
+      BAD :
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  Ecal_03_Occupancy:
+    plot_number: '03'
+    folder: Ecal_03_Occupancy
+    title: Occupancy
+    instruction: |-
+      Description: This occupancy plot describes the number of recorded DIGI data. A WHITE cluster (low to no occupancy) indicates a potentially dead trigger region, if not a masked channel. An unusually dense DARK BLUE cluster (large occupancy) indicates a potentially noisy trigger region. Known Issues: For run certification, a few noisy trigger towers (~3) are still GOOD. A known problem with the unpacker can cause the DIGI occupancy in EB-11 or EE+04 to drop. In this case, the entire Super Module will appear lighter (or completely white, depending when in the run problem occurs): immediately call the ECAL DOC. For COSMICS: Occupancy plots can be ignored. Action Item: If WHITE or DARK BLUE clusters are detected, contact the ECAL DOC.
+
+      GOOD :
+
+      BAD :
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  Ecal_04_Noise:
+    plot_number: '04'
+    folder: Ecal_04_Noise
+    title: Noise
+    instruction: |-
+      Description: This PHYSICS quality plot describes the amount of electronics noise/pedestal detected in the DIGI data. A RED cluster (large pedestal mean or RMS) indicates potential High-Voltage (HV) supply problems or data integrity problems. Splashes: Expect to see red clusters during splash events. Known Issues: During Stable Beams, all plots are sprinkled with red channels, especially in the high-eta region: there is no need to contact ECAL DOC. Action Item: If you see RED clusters (i.e. more than a few contiguous channels RED), contact the ECAL DOC.
+
+      GOOD :
+
+      BAD :
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  Ecal_05_RecHitEnergy:
+    plot_number: '05'
+    folder: Ecal_05_RecHitEnergy
+    title: Rec Hit Energy
+    instruction: |-
+      Description: This PHYSICS energy plot describes the energy distribution of RECHIT data. The energy should be approximately constant in regions of constant eta (horizontal lines in EB, circles in EE) and should be of the order ~0.1 GeV during collisions. A large, irregular distribution or an unusually large energy scale indicates potentially noisy trigger regions, bad data reconstruction, or issues with the calibration. Known Issues: If the timing of the CALIBRATION sequence is off, CALIBRATION data can leak into this PHYSICS sequence plot. See BAD reference plot: In EB, note band structures that are half the width of a Super Module. In EE, note the "missing pie slices". In both EB and EE, note the lack of energy gradient as you go to higher eta and the much higher energy scale of ~1-10 GeV. These are all characteristic of the laser CALIBRATION sequence leaking into the PHYSICS sequence. Inform the ECAL DOC immediately if this is seen. For COSMICS: Expect very low energy in most channels. Action Item: See Known Issues. If other large, irregular structures are detected, refer to 01, 02, 03, 08, or 09-14 for potential issues.
+
+      GOOD :
+
+      BAD :
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  Ecal_06_Timing:
+    plot_number: '06'
+    folder: Ecal_06_Timing
+    title: Timing
+    instruction: |-
+      Description: This PHYSICS quality plot describes the timing of RECHIT data. A RED cluster or ring (large timing deviation or RMS) indicates potential trigger or reconstruction biases. Known Issues: None. For COSMICS: The plot appears YELLOW (not filled). Also expect to see isolated RED spots. For Splash: Expect RED clusters as we see out of time signals. Action Item: If RED clusters or rings (especially in high-eta regions) are detected during collisions, contact the ECAL DOC.
+
+      GOOD :
+
+      BAD :
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  Ecal_07_TriggerPrimitives:
+    plot_number: '07'
+    folder: Ecal_07_TriggerPrimitives
+    title: Trigger Primitives
+    instruction: |-
+      Description: This PHYSICS quality plot describes the agreement between the emulated versus actual TRIGGER PRIMITIVE DIGI energy. A RED cluster (large energy disagreement) indicates a potentially noisy trigger, a timing bias, a link error, or a mismatch error with the unpacker. Known Issues: (1) A known problem with the data unpackers in EB-11 or EE+04 can cause mismatch errors (see 14 TT Flag-Readout Mismatch) over the entire Super Module. In this case, the entire Super Module will display RED: if this occurs, immediately call the ECAL DOC as this is very bad for PHYSICS data quality.(2) Red clusters made up of a few Trigger Towers periodically appear in EE-01, EE+08, and others (see GOOD reference plots): there is no need to contact the ECAL DOC in this case. For COSMICS: Not particularly meaningful as there are no real physics events during Cosmics. But too noisy towers can still cause problems. Action Item: If you see RED clusters (entire FED or distributed errors), contact the ECAL DOC.
+
+      GOOD :
+
+      BAD :
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  Ecal_08_HotCells:
+    plot_number: 08
+    folder: Ecal_08_HotCells
+    title: Hot Cells
+    instruction: |-
+      Description: This PHYSICS quality plot describes channel occupancy of DIGI, RECHIT, and TRIGGER PRIMITIVE DIGI data. A RED cluster (unusually large occupancy) indicates a potentially noisy trigger region. Known Issues: A known problem with the unpacker can cause the RECHIT occupancy in EB-11 or EE+04 to drop. In this case, the entire Super Module will display RED: immediately call the ECAL DOC. Action Item: If you see RED clusters, contact the ECAL DOC.
+
+      GOOD :
+
+      BAD :
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  Ecal_09_Laser3Photonics:
+    plot_number: 09
+    folder: Ecal_09_Laser3Photonics
+    title: Laser
+    instruction: |-
+      Description: This CALIBRATION quality plot describes the laser transparency calibration sequence. A RED cluster (small or large laser amplitude mean or large RMS, or large laser timing deviation) indicates a potential problem with the laser calibration system but does not affect PHYSICS data quality. It takes some time for the calibration sequence to reach all parts of the detector. Therefore, large sections of YELLOW may appear shortly after the start of new run or a recent plot reset (every 2 hours or ~300 Lumisections)--this is not a problem. The quality of this plot is not reflected in the 00 Summary. Known Issues: Because of a known issue that does not need to be addressed urgently, sometimes half an EB supermodule -- possibly an L-shaped region such as one of the L-shaped clusters in the BAD plots example on the right -- shows RED. In such cases there is no need to notify ECAL DOC. However, if any more than one such region appears RED, please notify ECAL DOC. Action Item: If RED clusters are seen or if large sections of YELLOW are still seen after more than (1 hour / ~150 Lumisections) after a reset, contact the ECAL DOC. .
+
+      GOOD :
+
+      BAD :
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  Ecal_10_Laser3PN:
+    plot_number: '10'
+    folder: Ecal_10_Laser3PN
+    title: Laser PN
+    instruction: |-
+      Description: This CALIBRATION quality plot describes the PN diodes that are used as reference by the laser transparency calibration sequence. A RED cluster (small PN amplitude mean or large RMS) indicates a potential problem with the laser PN diode system but does not affect PHYSICS data quality. Known Issues: None. Action Item: If RED clusters are seen, contact the ECAL DOC.
+
+      GOOD :
+
+      BAD :
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  Ecal_11_TestPulsePN:
+    plot_number: '11'
+    folder: Ecal_11_TestPulsePN
+    title: Test Pulse PN
+    instruction: |-
+      Description: This CALIBRATION quality plot describes the PN diodes that are used as reference by the Test Pulse calibration sequence. A RED cluster (small PN amplitude mean or large RMS) indicates a potential problem with the laser PN diode system but does not affect PHYSICS data quality. Known Issues: Strips of PNs in EB-01, EB-12, EB+06, and EB+15 and others (see GOOD reference plot) are known to be problematic: there is no need to contact ECAL DOC. Action Item: Ignore Test Pulse PN quality summary plots during Cosmics or Collisions runs in global because Test Pulse are not included in the standard calibration sequence. If RED clusters are seen elsewhere, contact the ECAL DOC.
+
+      GOOD :
+
+      BAD :
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  Ecal_12_Led:
+    plot_number: '12'
+    folder: Ecal_12_Led
+    title: Led
+    instruction: |-
+      2025 update: Disregard LED DQM plots. They are being monitored by LED experts only Description: This CALIBRATION quality plot describes the LED calibration sequence for the EE. A RED cluster (small LED amplitude mean or large RMS) indicates a potential problem with the LED calibration system but does not affect PHYSICS data quality. It takes some time for the calibration sequence to reach all parts of the detector. Therefore, large sections of YELLOW may appear shortly after the start of new run or a recent plot reset (every 2 hours or ~300 Lumisections)--this is not a problem. The quality of this plot is not reflected in the 00 Summary. Known Issues: LEDs have been disable in FEDs EE-1, EE-2, EE-4, EE+4 due to hardware problem and the same FEDs have been masked in these plots. It is OK to see them in YELLOW (at least until the problem will be solved). Sometimes, a unit of the LED system can get "stuck" in one wavelength which shows up as a strip of RED in this plot. Typically, these can be ignored but if this is the first time you are seeing this and we are taking collisions, it is a good idea to alert the ECAL DOC (who will probably then tell you it can be ignored). LEDs in EE- show some red spots (around Dee4) and are expected. One can compare 364728 (2023) and 362440 (2022) for reference. Action Item: Ignore FEDs EE-1, EE-2, EE-4, EE+4. While if in the other FEDs RED clusters are seen or if large sections of YELLOW are still seen after more than (1 hour or ~150 Lumisections) after a reset , contact the ECAL DOC.
+
+      GOOD :
+
+      BAD :
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  Ecal_13_LedPN:
+    plot_number: '13'
+    folder: Ecal_13_LedPN
+    title: Led PN
+    instruction: |-
+      2025 update: Disregard LED DQM plots. They are being monitored by LED experts only Description: This CALIBRATION quality plot describes the PN diodes that are used as reference by the LED calibration sequence. A RED cluster (small PN amplitude mean or large RMS) indicates a potential problem with the LED PN diode system but does not affect PHYSICS data quality. Action Item: If RED clusters are seen, contact the ECAL DOC.
+
+      GOOD :
+
+      BAD : No reference available.
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  Ecal_14_TTFlagReadoutMismatch:
+    plot_number: '14'
+    folder: Ecal_14_TTFlagReadoutMismatch
+    title: TT Flag-Readout Mismatch
+    instruction: |-
+      Description: This occupancy plot describes the number of mismatch errors between the Trigger Tower Flags and the SRP unpacker. The color scale is always in BLUE. Therefore, a BLUE cluster indicates a potential problem with the unpacker. Known Issues: A recurring problem with the unpacker in EB-11 or EE+04 can cause widespread mismatch errors. In this case, the entire Super Module will display BLUE. The 07 Trigger Primitives plot should also show RED in the same Super Module. If this occurs, immediately call the ECAL DOC as this is very bad for PHYSICS data quality. A few (~3) isolated BLUE clusters are OK (see GOOD reference plot).
+
+      GOOD :
+
+      BAD :
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser

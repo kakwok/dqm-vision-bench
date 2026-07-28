@@ -1,0 +1,241 @@
+version: '1.0'
+subsystem: L1T
+plots:
+  L1T_00_CaloLayer1ECALoccupancy:
+    plot_number: '00'
+    folder: L1T_00_CaloLayer1ECALoccupancy
+    title: CaloLayer1 ECAL occupancy
+    instruction: |-
+      Description: This plot counts the number of ECAL trigger towers, weighted by the tower energy, for all events seen by the L1T DQM system in integer eta-phi space. Quality criteria for collisions: The plot should be completely filled without big white areas. Any white area larger than two neighboring pixels must be reported. Quality criteria for cosmics: When not taking collision data, large white areas might appear simply because the corresponding calorimeter sections are not included in the run. You can check with DAQ shifter to see if that is the case. In non-collision runs, the occupancy is dominated by noise and more variance is normal and not a concern. Known issues: Small white areas of 1-2 pixels are expected due to masked noisy ECAL towers. Action for online DQM shifter: If the quality criteria are not met, call L1 DOC and make an entry in the Event Display and DQM Elog. Then post a link to your DQM Elog entry into the Trigger Elog. Action for offline trigger shifter: If the quality criteria are not met, mark the run as BAD, submit a JIRA ticket and mention this in your Elog shift summary.
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  L1T_01_CaloLayer1HCALoccupancy:
+    plot_number: '01'
+    folder: L1T_01_CaloLayer1HCALoccupancy
+    title: CaloLayer1 HCAL occupancy
+    instruction: |-
+      Description: This plot counts the number of HCAL trigger towers, weighted by the tower energy, for all events seen by the L1T DQM system in integer eta-phi space. Quality criteria for collisions: The plot should be completely filled without big white areas. Any larger area than a single white pixel must be reported. Quality criteria for cosmics: If not taking collision data, large white areas might appear simply because the corresponding calorimeter sections are not included in the run. You can check with DAQ shifter to see if that is the case. In non-collision runs, the occupancy is dominated by noise and more variance is normal and not a concern. The endcap (abs. iEta>17) regions can show very little occupancy, this is due to lower electronic noise and not a problem. Known issues: Empty channel at iPhi=51, iEta=+9 to +12, as reported in slide 4 of ppt. Expected to resolve the issue in Decempber 2022. Action for online DQM shifter: If you spot white areas in this plot, call L1 DOC and make an entry in the Event Display and DQM Elog. Then post a link to your DQM Elog entry into the Trigger Elog. Action for offline trigger shifter: If the quality criteria are not met, mark the run as BAD, submit a JIRA ticket and mention this in your Elog shift summary.
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  L1T_02_CaloLayer2centraljetETetaphi:
+    plot_number: '02'
+    folder: L1T_02_CaloLayer2centraljetETetaphi
+    title: CaloLayer2 central jet E_T eta phi
+    instruction: |-
+      Description: CaloLayer2 central jet transverse energy shown in (eta,phi) plane. Quality criteria for collisions: The shifter should be checking for gross asymmetries between the positive and negative eta halves of the detector. The shifter should also look for obvious holes (masked or dead towers) and hot towers. This should probably be linked to the shifter histograms for Layer 1 which show masked towers. Quality criteria for cosmics: During cosmics, low occupancy in the calorimeter is expected. In non-collision runs, the occupancy is dominated by noise and more variance is normal and not a concern. The endcap (abs. iEta>17) regions can show very little occupancy, this is due to lower electronic noise and not a problem. Action for online DQM shifter: If the quality criteria are not met, call L1 DOC and make an entry in the Event Display and DQM Elog. Then post a link to your DQM Elog entry into the Trigger Elog. Action for offline trigger shifter: If the quality criteria are not met, mark the run as BAD, submit a JIRA ticket and mention this in your Elog shift summary.
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  L1T_03_CaloLayer2forwardjetETetaphi:
+    plot_number: '03'
+    folder: L1T_03_CaloLayer2forwardjetETetaphi
+    title: CaloLayer2 forward jet E_T eta phi
+    instruction: |-
+      Description: CaloLayer2 forward jet transverse energy shown in (eta,phi) plane. Quality criteria: The shifter should be checking for gross asymmetries between the positive and negative eta halves of the detector. The shifter should also look for obvious holes (masked or dead towers) and hot towers. This should probably be linked to the shifter histograms for Layer 1 which show masked towers. Quality criteria for cosmics: During cosmics, low occupancy in the calorimeter is expected. In non-collision runs, the occupancy is dominated by noise and more variance is normal and not a concern. The endcap (abs. iEta>17) regions can show very little occupancy, this is due to lower electronic noise and not a problem. Action for online DQM shifter: If the quality criteria are not met, call L1 DOC and make an entry in the Event Display and DQM Elog. Then post a link to your DQM Elog entry into the Trigger Elog. Action for offline trigger shifter: If the quality criteria are not met, mark the run as BAD, submit a JIRA ticket and mention this in your Elog shift summary.
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  L1T_04_CaloLayer2isoEGETetaphi:
+    plot_number: '04'
+    folder: L1T_04_CaloLayer2isoEGETetaphi
+    title: CaloLayer2 iso EG E_T eta phi
+    instruction: |-
+      Description: CaloLayer2 isolated electron/photon transverse energy shown in (eta,phi) plane. Quality criteria: The shifter should be checking for gross asymmetries between the positive and negative eta halves of the detector. The shifter should also look for obvious holes (masked or dead towers) and hot towers. This should probably be linked to the shifter histograms for Layer 1 which show masked towers. Quality criteria for cosmics: During cosmics, low occupancy in the calorimeter is expected. In non-collision runs, the occupancy is dominated by noise and more variance is normal and not a concern. The endcap (abs. iEta>17) regions can show very little occupancy, this is due to lower electronic noise and not a problem. Action for online DQM shifter: If the quality criteria are not met, call L1 DOC and make an entry in the Event Display and DQM Elog. Then post a link to your DQM Elog entry into the Trigger Elog. Action for offline trigger shifter: If the quality criteria are not met, mark the run as BAD, submit a JIRA ticket and mention this in your Elog shift summary.
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  L1T_05_CaloLayer2nonisoEGETetaphi:
+    plot_number: '05'
+    folder: L1T_05_CaloLayer2nonisoEGETetaphi
+    title: CaloLayer2 noniso EG E_T eta phi
+    instruction: |-
+      Description: CaloLayer2 non-isolated electron/photon transverse energy shown in (eta,phi) plane. Quality criteria: The shifter should be checking for gross asymmetries between the positive and negative eta halves of the detector. The shifter should also look for obvious holes (masked or dead towers) and hot towers. This should probably be linked to the shifter histograms for Layer 1 which show masked towers. Quality criteria for cosmics: During cosmics, low occupancy in the calorimeter is expected. In non-collision runs, the occupancy is dominated by noise and more variance is normal and not a concern. The endcap (abs. iEta>17) regions can show very little occupancy, this is due to lower electronic noise and not a problem. Action for online DQM shifter: If the quality criteria are not met, call L1 DOC and make an entry in the Event Display and DQM Elog. Then post a link to your DQM Elog entry into the Trigger Elog. Action for offline trigger shifter: If the quality criteria are not met, mark the run as BAD, submit a JIRA ticket and mention this in your Elog shift summary.
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  L1T_06_CaloLayer2isotauETetaphi:
+    plot_number: '06'
+    folder: L1T_06_CaloLayer2isotauETetaphi
+    title: CaloLayer2 iso tau E_T eta phi
+    instruction: |-
+      Description: CaloLayer2 isolated tau transverse energy shown in (eta,phi) plane. Quality criteria: The shifter should be checking for gross asymmetries between the positive and negative eta halves of the detector. The shifter should also look for obvious holes (masked or dead towers) and hot towers. This should probably be linked to the shifter histograms for Layer 1 which show masked towers. Quality criteria for cosmics: During cosmics, low occupancy in the calorimeter is expected. In non-collision runs, the occupancy is dominated by noise and more variance is normal and not a concern. The endcap (abs. iEta>17) regions can show very little occupancy, this is due to lower electronic noise and not a problem. Action for online DQM shifter: If the quality criteria are not met, call L1 DOC and make an entry in the Event Display and DQM Elog. Then post a link to your DQM Elog entry into the Trigger Elog. Action for offline trigger shifter: If the quality criteria are not met, mark the run as BAD, submit a JIRA ticket and mention this in your Elog shift summary.
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  L1T_07_CaloLayer2nonisotauETetaphi:
+    plot_number: '07'
+    folder: L1T_07_CaloLayer2nonisotauETetaphi
+    title: CaloLayer2 noniso tau E_T eta phi
+    instruction: |-
+      Description: CaloLayer2 non-isolated tau transverse energy shown in (eta,phi) plane. Quality criteria: The shifter should be checking for gross asymmetries between the positive and negative eta halves of the detector. The shifter should also look for obvious holes (masked or dead towers) and hot towers. This should probably be linked to the shifter histograms for Layer 1 which show masked towers. Quality criteria for cosmics: During cosmics, low occupancy in the calorimeter is expected. In non-collision runs, the occupancy is dominated by noise and more variance is normal and not a concern. The endcap (abs. iEta>17) regions can show very little occupancy, this is due to lower electronic noise and not a problem. Action for online DQM shifter: If the quality criteria are not met, call L1 DOC and make an entry in the Event Display and DQM Elog. Then post a link to your DQM Elog entry into the Trigger Elog. Action for offline trigger shifter: If the quality criteria are not met, mark the run as BAD, submit a JIRA ticket and mention this in your Elog shift summary.
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  L1T_08_uGMTmuonpT:
+    plot_number: 08
+    folder: L1T_08_uGMTmuonpT
+    title: uGMT muon p_T
+    instruction: |-
+      Description: uGMT muon transverse momentum distribution. Quality criteria: Smoothly falling spectrum (spikes at 124 GeV and 200 GeV are expected from the saturation value of track finder pT). Action for online DQM shifter: If the quality criteria are not met, call L1 DOC and make an entry in the Event Display and DQM Elog. Then post a link to your DQM Elog entry into the Trigger Elog. Action for offline trigger shifter: If the quality criteria are not met, mark the run as BAD, submit a JIRA ticket and mention this in your Elog shift summary.
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  L1T_09_uGMTmuoneta:
+    plot_number: 09
+    folder: L1T_09_uGMTmuoneta
+    title: uGMT muon eta
+    instruction: |-
+      Description: uGMT muon eta distribution. Quality criteria: Symmetric distribution with no spikes larger than shown in the example pictures. (Small statistics can of course cause lead to random spikes as well, they are not a concern.) Quality criteria for cosmics: For cosmic runs, asymmetry in the eta distribution of muons is natural. It is due to the shaft on the minus side. Action for online DQM shifter: If the quality criteria are not met, call L1 DOC and make an entry in the Event Display and DQM Elog. Then post a link to your DQM Elog entry into the Trigger Elog. Action for offline trigger shifter: If the quality criteria are not met, mark the run as BAD, submit a JIRA ticket and mention this in your Elog shift summary.
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  L1T_10_uGMTmuonphi:
+    plot_number: '10'
+    folder: L1T_10_uGMTmuonphi
+    title: uGMT muon phi
+    instruction: |-
+      Description: uGMT muon phi distribution. Quality criteria: Symmetric distribution with no spikes larger than shown in the example pictures. (Small statistics can of course cause lead to random spikes as well, they are not a concern.) Quality criteria for cosmics: One hill mostly located in the negative phi region with the peak around -1.6. In an alternate configuration where the entire EMTF is enabled, we expect a smaller hill at around 1.6. Action for online DQM shifter: If the quality criteria are not met, call L1 DOC and make an entry in the Event Display and DQM Elog. Then post a link to your DQM Elog entry into the Trigger Elog. Action for offline trigger shifter: If the quality criteria are not met, mark the run as BAD, submit a JIRA ticket and mention this in your Elog shift summary.
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  L1T_11_uGMTmuonetaphi:
+    plot_number: '11'
+    folder: L1T_11_uGMTmuonetaphi
+    title: uGMT muon eta phi
+    instruction: |-
+      Description: Muon pseudorapidity vs. phi coordinates of uGMT output muons. These are the L1T muon coordinates that the HLT uses. Quality criteria for collisions: No big holes. The reference plot represents the long collision run containing several hundreds of lumisections and the plot can be emptier in the shorter collision runs. The bins with -0.05 <= eta < 0 are always empty. Small cold or empty regions at eta = -0.25, 0.8<phi<1.1 and eta=+0.25, 1.4<phi<1.7 are due to smaller DT chambers in those areas in order to leave space for the cryogenic chimneys of the detector (CMS TDR 2008 JINST 3 S08004, page 217). Quality criteria for cosmics: Only the lower part of the plot (that means mostly negative phi values) will be filled because the inputs to the uGMT from the upper detector part (positive phi values) are disabled for cosmic runs. In an alternate configuration where the entire EMTF is enabled, we expect the areas with |eta| > 1 to be filled completely. Action for online DQM shifter: If the quality criteria are not met, call L1 DOC and make an entry in the Event Display and DQM Elog. Then post a link to your DQM Elog entry into the Trigger Elog. Action for offline trigger shifter: If the quality criteria are not met, mark the run as BAD, submit a JIRA ticket and mention this in your Elog shift summary.
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  L1T_12_uGMTmuonetaphiatvertex:
+    plot_number: '12'
+    folder: L1T_12_uGMTmuonetaphiatvertex
+    title: uGMT muon eta phi at vertex
+    instruction: |-
+      Description: Muon pseudorapidity vs. phi coordinates of uGMT output muons calculated at the vertex. These are the L1T muon coordinates that the uGT uses. Quality criteria for collisions: No big holes. The histogram should look similar to the histogram number 11 but more smooth. Quality criteria for cosmics: Only the lower part of the plot and a small part a phi around +3 (that means mostly negative phi values) will be filled because the inputs to the uGMT from the upper detector part (positive phi values) are disabled for cosmic runs and the maximal phi difference between phi and phi at the vertex is around 0.7. The distribution is not symmetric between the two endcap regions. In an alternate configuration where the entire EMTF is enabled, we expect the areas with |eta| > 1 to be filled completely. Action for online DQM shifter: If the quality criteria are not met, call L1 DOC and make an entry in the Event Display and DQM Elog. Then post a link to your DQM Elog entry into the Trigger Elog. Action for offline trigger shifter: If the quality criteria are not met, mark the run as BAD, submit a JIRA ticket and mention this in your Elog shift summary.
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  L1T_13_uGMTinputlinkvsinputmuonBX:
+    plot_number: '13'
+    folder: L1T_13_uGMTinputlinkvsinputmuonBX
+    title: uGMT input link vs. input muon BX
+    instruction: |-
+      Description: uGMT input link number from (B)MTF, (O)MTF, and (E)MTF vs. BX number in the event. Quality criteria for collisions: All links should have a clear maximum at BX = 0. Quality criteria for cosmics: Links from the lower part of the detector (B8,9,10,11,12, O+/-4,5,6, E+/-4,5,6) should have a maximum at BX = 0, whereas links from the upper part of the detector should have most of the entries in BX = -2 and BX = -1. In an alternate configuration where the entire EMTF is enabled, we expect the EMTF links to be centered at BX=0. Action for online DQM shifter: If the quality criteria are not met, call L1 DOC and make an entry in the Event Display and DQM Elog. Then post a link to your DQM Elog entry into the Trigger Elog. Action for offline trigger shifter: If the quality criteria are not met, mark the run as BAD, submit a JIRA ticket and mention this in your Elog shift summary.
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  L1T_14_uGMTinputlinkvsmuoncharge:
+    plot_number: '14'
+    folder: L1T_14_uGMTinputlinkvsmuoncharge
+    title: uGMT input link vs. muon charge
+    instruction: |-
+      Description: uGMT input link number from (B)MTF, (O)MTF, and (E)MTF vs. L1T muon charge. Quality criteria for collisions: Almost only entries for charge +1 and -1. The ratio between positive and negative charge should be about even for each link. Few charge 0 entries can be an expected behavior. If these entries become more than few handfuls report the issue. Quality criteria for cosmics: Only links from the lower part of the detector (B8,9,10,11,12, O+/-4,5,6, E+/-4,5,6) will be filled because the inputs to the uGMT from the upper detector part are disabled for cosmic runs. The ratio between positive and negative charge does not need to be even for each link. In an alternate configuration where the entire EMTF is enabled, we expect all EMTF links to be filled. Action for online DQM shifter: If the quality criteria are not met, call L1 DOC and make an entry in the Event Display and DQM Elog. Then post a link to your DQM Elog entry into the Trigger Elog. Action for offline trigger shifter: If the quality criteria are not met, mark the run as BAD, submit a JIRA ticket and mention this in your Elog shift summary.
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  L1T_15_EMTFChamberOccupancy:
+    plot_number: '15'
+    folder: L1T_15_EMTFChamberOccupancy
+    title: EMTF Chamber Occupancy
+    instruction: |-
+      Description: This plot shows the number of hits (LCTs) in each chamber received by the EMTF. Quality criteria for collisions: This plot should only have 4 - 6 holes (white regions) in long runs (> 200 LS), scatterend around the plot. A larger number of holes indicate some problem, especially if there are many in the same sector and/or station. Quality criteria for cosmics: Same as for collisions, except that the plot can also be partially (or completely) empty. Action for online DQM shifter: If the quality criteria are not met, call L1 DOC and make an entry in the Event Display and DQM Elog. Then post a link to your DQM Elog entry into the Trigger Elog. Action for offline trigger shifter: If the distribution has any unexpected holes or hot regions or is drastically different from the example, mark the run as BAD, submit a JIRA ticket and mention this in your Elog shift summary..
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  L1T_16_EMTFTrackBunchCrossing:
+    plot_number: '16'
+    folder: L1T_16_EMTFTrackBunchCrossing
+    title: EMTF Track Bunch Crossing
+    instruction: |-
+      Description: This plot shows the timing (BX) of tracks sent by the EMTF. Quality criteria for collisions: There be a horizontal yellow band at BX = 0, with all bins at BX=0 as yellow. All bins with BX ≠ 0 should be blue. In runs with > 50 LS, no BX = 0 bins should be empty, and no BX ≠ 0 bins should have more tracks than any BX = 0 bin. It's normal to have white bars in BX = +/- 3 Quality criteria for cosmics: Same as for collisions, but the BX=0 band might have different colors in sectors 1, 2, and 3 in the center of the plot (see picture). Also, some areas in the plot can be white due to lack of statistics. Action for online DQM shifter: If the quality criteria are not met, call L1 DOC and make an entry in the Event Display and DQM Elog. Then post a link to your DQM Elog entry into the Trigger Elog. Action for offline trigger shifter: If the distribution has any unexpected holes or hot regions or is drastically different from the example, mark the run as BAD, submit a JIRA ticket and mention this in your Elog shift summary.
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  L1T_17_uGTAlgorithmTriggerBitsafterprescalevsGlobalBXNumber:
+    plot_number: '17'
+    folder: L1T_17_uGTAlgorithmTriggerBitsafterprescalevsGlobalBXNumber
+    title: uGT Algorithm Trigger Bits (after prescale) vs. Global BX Number
+    instruction: |-
+      Description: Global BX Number (horizontal axis) vs. uGT Algorithm Trigger Bits after prescale (vertical axis). Quality criteria for collisions: This plot can look very different depending on the LHC filling scheme, the trigger menu and the trigger prescales used. In usual proton runs most BXs should be filled and you see a regular pattern of trains as shown in the example image. In particular, the LHC orbit gap (BX 3445 - BX 3564) should not show many triggers (only randoms and noise). The gap between BX 3529 and 3563 must always be empty. Algorithms (vertical axis) that do not exist in the menu (you can check this from WBM) must not show up. Quality criteria for cosmics: For cosmic runs, there are typically less trigger bits as for collision runs. The gap between BX 3531-3561 must appear. Action for online DQM shifter: If the quality criteria are not met, inform the trigger shifter and call L1 DOC immediately. Then make an entry in the Event Display and DQM Elog and post a link to your DQM Elog entry into the Trigger Elog. Action for offline trigger shifter: If the quality criteria are not met, mark the run as BAD, submit a JIRA ticket and mention this in your Elog shift summary.
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  L1T_18_uGTAlgorithmTriggerBitsafterprescalevsBXNumberinEvent:
+    plot_number: '18'
+    folder: L1T_18_uGTAlgorithmTriggerBitsafterprescalevsBXNumberinEvent
+    title: uGT Algorithm Trigger Bits (after prescale) vs. BX Number in Event
+    instruction: |-
+      Description: BX Number in Event (horizontal axis) vs. uGT Algorithm Trigger Bits after prescale (vertical axis). Quality criteria for collisions: Most of triggering should happen in BX 0 (central BX in Event). However, certain algorithms may also fire in the two BX after or (more rarely) before the central BX. Algorithms (vertical axis) that do not exist in the menu (you can check this from WBM) must not show up. Quality criteria for cosmics: For cosmic runs, there are typically less trigger bits as for collision runs. The plot will show the same pattern as for collision runs, with most trigger bits in BX=0 and fewer in +- 1 and 2. Action for online DQM shifter: If the quality criteria are not met, inform the trigger shifter and call L1 DOC immediately. Then make an entry in the Event Display and DQM Elog and post a link to your DQM Elog entry into the Trigger Elog. Action for offline trigger shifter: If the quality criteria are not met, mark the run as BAD, submit a JIRA ticket and mention this in your Elog shift summary.
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  L1T_19_uGTofunprescaledalgoacceptsrelativetoofallalgoacceptsin2BXvsBXnumberineventforfirstbunchintrain:
+    plot_number: '19'
+    folder: L1T_19_uGTofunprescaledalgoacceptsrelativetoofallalgoacceptsin2BXvsBXnumberineventforfirstbunchintrain
+    title: 'uGT # of unprescaled algo accepts relative to # of all algo accepts in +-2 BX vs. BX number
+      in event for first bunch in train'
+    instruction: |-
+      Description: BX Number in Event (horizontal axis) vs. selected unprescaled uGT Algorithms before prescale (vertical axis). z axis: ratio of algo accept in the BX to algo accepts in the BX range where readout information was available for the event (usually -2 to +2) around the first bunch in a bunch train. The ratios in one row do not need to add up to 1 due to the construction of the plot. Since for the construction the BX window is shifted in order to put the first bunch in train in the BX 0 bin, information about BX further than +/-2 BX away from the L1A BX would be needed. Since this information does not exist, neither the numerator nor the denominator are filled for the corresponding shifted BX bin. This plot only shows useful information if the bunch spacing is 25 ns and if the first bunch in train algo fires not more than once in 5 BX. Quality criteria for collisions: If the LHC filling scheme contains mostly bunch trains most of triggering should happen in BX 0 (central BX in Event) and after. For an algorithm that does not pre fire or post fire and that has the same probability of firing for all bunches in a train the ratios from BX -2 to BX 2 should be 0, 0, 1/3, 1/3, 1/3. However, certain algorithms may also fire before the central BX. This should be rare for algorithms used for physics. It is also known that some calorimeter dependent algorithms have a higher probability of firing in the second and third bunch of a train, which are represented by BX +1 and BX +2 on the x axis in this plot. Depending on the trigger menu the vertical axis can contain more or less algo names. Quality criteria for cosmics: Since there are no bunch trains in cosmics the plot will be empty. Action for online DQM shifter: If the quality criteria are not met, inform the trigger shifter and call L1 DOC immediately. Then make an entry in the Event Display and DQM Elog and post a link to your DQM Elog entry into the Trigger Elog. Action for offline trigger shifter: If the quality criteria are not met, mark the run as BAD, submit a JIRA ticket and mention this in your Elog shift summary.
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  L1T_20_uGTofunprescaledalgoacceptsrelativetoofallalgoacceptsin2BXvsBXnumberineventforlastbunchintrain:
+    plot_number: '20'
+    folder: L1T_20_uGTofunprescaledalgoacceptsrelativetoofallalgoacceptsin2BXvsBXnumberineventforlastbunchintrain
+    title: 'uGT # of unprescaled algo accepts relative to # of all algo accepts in +-2 BX vs. BX number
+      in event for last bunch in train'
+    instruction: |-
+      Description: BX Number in Event (horizontal axis) vs. selected unprescaled uGT Algorithms before prescale (vertical axis). z axis: ratio of algo accept in the BX to algo accepts in the BX range where readout information was available for the event (usually -2 to +2) around the last bunch in a bunch train. The ratios in one row do not need to add up to 1 due to the construction of the plot. Since for the construction the BX window is shifted in order to put the last bunch in train in the BX 0 bin, information about BX further than +/-2 BX away from the L1A BX would be needed. Since this information does not exist, neither the numerator nor the denominator are filled for the corresponding shifted BX bin. This plot only shows useful information if the bunch spacing is 25 ns and if the last bunch in train algo fires not more than once in 5 BX. Quality criteria for collisions: If the LHC filling scheme contains mostly bunch trains most of triggering should happen in BX 0 (central BX in Event) and before. For an algorithm that does not pre fire or post fire and that has the same probability of firing for all bunches in a train the ratios from BX -2 to BX 2 should be 1/3, 1/3, 1/3, 0, 0. However, certain algorithms may also fire in the two BX after the central BX. This should be rare for algorithms used for physics. Depending on the trigger menu the vertical axis can contain more or less algo names. Quality criteria for cosmics: Since there are no bunch trains in cosmics the plot will be empty. Action for online DQM shifter: If the quality criteria are not met, inform the trigger shifter and call L1 DOC immediately. Then make an entry in the Event Display and DQM Elog and post a link to your DQM Elog entry into the Trigger Elog. Action for offline trigger shifter: If the quality criteria are not met, mark the run as BAD, submit a JIRA ticket and mention this in your Elog shift summary.
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  L1T_21_uGTofprescaledalgoacceptsrelativetoofallalgoacceptsin2BXvsBXnumberineventforfirstbunchintrain:
+    plot_number: '21'
+    folder: L1T_21_uGTofprescaledalgoacceptsrelativetoofallalgoacceptsin2BXvsBXnumberineventforfirstbunchintrain
+    title: 'uGT # of prescaled algo accepts relative to # of all algo accepts in +-2 BX vs. BX number
+      in event for first bunch in train'
+    instruction: |-
+      Description: BX Number in Event (horizontal axis) vs. selected prescaled uGT Algorithms before prescale (vertical axis). z axis: ratio of algo accept in the BX to algo accepts in the BX range where readout information was available for the event (usually -2 to +2) around the first bunch in a bunch train. The ratios in one row do not need to add up to 1 due to the construction of the plot. Since for the construction the BX window is shifted in order to put the first bunch in train in the BX 0 bin, information about BX further than +/-2 BX away from the L1A BX would be needed. Since this information does not exist, neither the numerator nor the denominator are filled for the corresponding shifted BX bin. This plot only shows useful information if the bunch spacing is 25 ns and if the first bunch in train algo fires not more than once in 5 BX. Quality criteria for collisions: If the LHC filling scheme contains mostly bunch trains most of triggering should happen in BX 0 (central BX in Event) and after. For an algorithm that does not pre fire or post fire and that has the same probability of firing for all bunches in a train the ratios from BX -2 to BX 2 should be 0, 0, 1/3, 1/3, 1/3. However, certain algorithms may also fire before the central BX. This should be rare for algorithms used for physics. It is also known that some calorimeter dependent algorithms have a higher probability of firing in the second and third bunch of a train, which are represented by BX +1 and BX +2 on the x axis in this plot. Depending on the trigger menu the vertical axis can contain more or less algo names. Quality criteria for cosmics: Since there are no bunch trains in cosmics the plot will be empty. Action for online DQM shifter: If the quality criteria are not met, inform the trigger shifter and call L1 DOC immediately. Then make an entry in the Event Display and DQM Elog and post a link to your DQM Elog entry into the Trigger Elog. Action for offline trigger shifter: If the quality criteria are not met, mark the run as BAD, submit a JIRA ticket and mention this in your Elog shift summary.
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  L1T_22_uGTofprescaledalgoacceptsrelativetoofallalgoacceptsin2BXvsBXnumberineventforlastbunchintrain:
+    plot_number: '22'
+    folder: L1T_22_uGTofprescaledalgoacceptsrelativetoofallalgoacceptsin2BXvsBXnumberineventforlastbunchintrain
+    title: 'uGT # of prescaled algo accepts relative to # of all algo accepts in +-2 BX vs. BX number
+      in event for last bunch in train'
+    instruction: |-
+      Description: BX Number in Event (horizontal axis) vs. selected prescaled uGT Algorithms before prescale (vertical axis). z axis: ratio of algo accept in the BX to algo accepts in the BX range where readout information was available for the event (usually -2 to +2) around the last bunch in a bunch train. The ratios in one row do not need to add up to 1 due to the construction of the plot. Since for the construction the BX window is shifted in order to put the last bunch in train in the BX 0 bin, information about BX further than +/-2 BX away from the L1A BX would be needed. Since this information does not exist, neither the numerator nor the denominator are filled for the corresponding shifted BX bin. This plot only shows useful information if the bunch spacing is 25 ns and if the last bunch in train algo fires not more than once in 5 BX. Quality criteria for collisions: If the LHC filling scheme contains mostly bunch trains most of triggering should happen in BX 0 (central BX in Event) and before. For an algorithm that does not pre fire or post fire and that has the same probability of firing for all bunches in a train the ratios from BX -2 to BX 2 should be 1/3, 1/3, 1/3, 0, 0. However, certain algorithms may also fire in the two BX after the central BX. This should be rare for algorithms used for physics. Depending on the trigger menu the vertical axis can contain more or less algo names. Quality criteria for cosmics: Since there are no bunch trains in cosmics the plot will be empty. Action for online DQM shifter: If the quality criteria are not met, inform the trigger shifter and call L1 DOC immediately. Then make an entry in the Event Display and DQM Elog and post a link to your DQM Elog entry into the Trigger Elog. Action for offline trigger shifter: If the quality criteria are not met, mark the run as BAD, submit a JIRA ticket and mention this in your Elog shift summary.
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  L1T_23_RatioL1TMuonsBXFirstBunchminus1:
+    plot_number: '23'
+    folder: L1T_23_RatioL1TMuonsBXFirstBunchminus1
+    title: Ratio for L1T muons first bunch in BX = -1
+    instruction: |-
+      Description: Monitor timing of L1T muons in BX = -1 in L1T muon eta vs phi distributions for the first bunch in bunch trains. The plots can also be found in "L1T/L1TObjects/L1TMuons/timing/First_bunch" directory in L1T workspace of Online DQM. . Quality criteria for collisions: Ratio_L1TMuons_BX_FirstBunch_minus1 plot should be mostly empty with bin value < 0.1. Action for online DQM shifter: If the quality criteria are not met, check the denominator used to define the ratio in "L1T/L1TObjects/L1TMuons/timing/First_bunch/denominator_muons_firstbunch" in L1T workspace of Online DQM". If the bins with high ratio correspond to low statistics (or empty bins), no action is required. Otherwise, inform the trigger shifter and call L1 DOC immediately. Then make an entry in the Event Display and DQM Elog and post a link to your DQM Elog entry into the Trigger Elog. Action for offline trigger shifter: If the quality criteria are not met, mark the run as BAD, submit a JIRA ticket and mention this in your Elog shift summary.
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  L1T_24_RatioL1TJetBXFirstBunchminus1:
+    plot_number: '24'
+    folder: L1T_24_RatioL1TJetBXFirstBunchminus1
+    title: Ratio for L1T Jet first bunch in BX = -1
+    instruction: |-
+      Description: Monitor timing of L1T Jets in BX = -1 in L1T jet eta vs phi distributions for the first bunch in bunch trains. The plots can also be found in "L1T/L1TObjects/L1TJets/timing/First_bunch" directory in L1T workspace of Online DQM. . Quality criteria for collisions: Ratio_L1TJets_BX_FirstBunch_minus1 plot should be mostly empty with bin value < 0.1. Action for online DQM shifter: If the quality criteria are not met, check the denominator used to define the ratio in "L1T/L1TObjects/L1TJets/timing/First_bunch/denominator_jet_firstbunch" in L1T workspace of Online DQM". If the bins with high ratio correspond to low statistics (or empty bins), no action is required. Otherwise, inform the trigger shifter and call L1 DOC immediately. Then make an entry in the Event Display and DQM Elog and post a link to your DQM Elog entry into the Trigger Elog. Action for offline trigger shifter: If the quality criteria are not met, mark the run as BAD, submit a JIRA ticket and mention this in your Elog shift summary.
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  L1T_25_RatioL1TEGammaptmin20p0gevBXFirstBunchminus1:
+    plot_number: '25'
+    folder: L1T_25_RatioL1TEGammaptmin20p0gevBXFirstBunchminus1
+    title: Ratio for L1T EGamma first bunch in BX = -1
+    instruction: |-
+      Description: Monitor timing of L1T EGammas in BX = -1 in L1T EGamma eta vs phi distributions for the first bunch in bunch trains. The plots can also be found in "L1T/L1TObjects/L1TEGammas/timing/First_bunch" directory in L1T workspace of Online DQM. . Quality criteria for collisions: Ratio_L1TEGamma_BX_FirstBunch_minus1 plot should be mostly empty with bin value < 0.1. Action for online DQM shifter: If the quality criteria are not met, inform the trigger shifter and call L1 DOC immediately. Then make an entry in the Event Display and DQM Elog and post a link to your DQM Elog entry into the Trigger Elog. Action for offline trigger shifter: If the quality criteria are not met, mark the run as BAD, submit a JIRA ticket and mention this in your Elog shift summary.
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser

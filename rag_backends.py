@@ -260,10 +260,8 @@ def lookup_instruction(stem: str, store_dir: str | Path = "plot_instructions") -
     today = date.today().isoformat()
 
     parts: list[str] = []
-    if entry.get("description"):
-        parts.append(entry["description"].strip())
-    if entry.get("quality_criteria"):
-        parts.append(entry["quality_criteria"].strip())
+    if entry.get("instruction"):
+        parts.append(entry["instruction"].strip())
     for issue in entry.get("known_issues", []):
         expires = issue.get("expires")
         if expires and str(expires) < today:

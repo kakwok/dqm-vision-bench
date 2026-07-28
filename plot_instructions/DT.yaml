@@ -1,0 +1,57 @@
+version: '1.0'
+subsystem: DT
+plots:
+  DT_00-ROChannelSummary_:
+    plot_number: '00'
+    folder: DT_00-ROChannelSummary_
+    title: ROChannelSummary
+    instruction: |-
+      Description: Summary of the status of the Read-Out (RO) channels in each sector. Legend: Percentage of channels which are not blocked for particular problems of the electronics: from 0% ( BAD = no data) to 100% ( GOOD ) Subsystem Evaluation: Few sectors with a percentage lower than 100% are usually OK. If many sectors are RED (0%) for most of the run the subsystem should be labeled as BAD. Action Items: In case of many red bins please contact the DT shifter. Please note that if a run crashes for some reasons, this plot could appear messed up at the end of the run; but in this case it doesn't necessarily mean that DT's are bad. You may cross-check the RO behaviour vs time looking at the trend plot: "EnabledROChannelsVsLS" in the DT->00-ROChannels folder
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  DT_01-OccupancySummary_:
+    plot_number: '01'
+    folder: DT_01-OccupancySummary_
+    title: OccupancySummary
+    instruction: |-
+      Description: This plot is the summary of the digi occupancy, reporting the status of active sectors in the different wheels. Legend: Percentage of the sector with a "normal" occupancy: from 0% ( BAD ) to 100% ( GOOD ). ATTENTION : The plot is reset periodically every 400 LS and it turns to red. So, do not worry if you see the plot red and the run has a number of LS that is multiple of 400. After 30-40 LS it should turn back to green. Subsystem Evaluation: Only dark red bins should be considered as problematic; chambers under-populated will turn the bin of the pertaining sector from green to yellow/orange. It doesn't affect the quality of the data though, whereas many sectors in red could indicate a problem (see notes for known problems). Runs in normal conditions and with reasonable statistics are expected to appear mainly green, whereas many orange/red bins could show up in short runs , runs with low luminosity or reduced number of bunches , and Heavy Ions collision runs too. Action Items: In normal conditions, and with significant statistics, if you see many red sectors please report to the DT shifter. In case of peculiar running conditions, as could be low intensity runs , Heavy Ions collisions runs or very short runs , the occupancy can be rather low, so different sectors are expected to show up in orange; no particular action is needed in this case. In case of doubt, make a comparison with the reference run, with other runs taken in similar conditions, and/or consult the shift leader before to call the expert, and put a comment in the run registry and eLog.
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  DT_02-SegmentSummary_:
+    plot_number: '02'
+    folder: DT_02-SegmentSummary_
+    title: SegmentSummary
+    instruction: |-
+      Description: Summary of the status of the reconstruction of 4D segments at chamber level. The summary is done for each sector on the 5 wheels. Legend: Percentage of the chambers in a sector with reconstructed segments: from 0% ( BAD ), meaning no segments to 100% ( GOOD ). Subsystem Evaluation: Problems in 01-OccupancySummary will result also in this plot. Runs with many red sectors should be reported. Usually problems in the segment reco can be recovered offline. Action Items: Report new problems to the DT shifter, but please be careful in evaluating low statistics / short runs, or those taken with particular beam conditions (e.g. low beam current, small number of bunches and also Heavy Ions collisions runs).
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  DT_03-TM-TriggerCorrFractionSummary_:
+    plot_number: '03'
+    folder: DT_03-TM-TriggerCorrFractionSummary_
+    title: TM_TriggerCorrFractionSummary
+    instruction: |-
+      Description: Summary plot of LocalTrigger status. The plot monitors the quality of the triggers generated at chamber level; chambers with low (<50%) fraction of correlated triggers (HH, HL and LL qualities) generate errors. The ratio is computed using the best trigger candidate (the one with highest quality) per chamber and per event. Legend: GREEN : no problem - BLUE : no trigger data in this sector - from YELLOW to RED : 1 to 4 chambers with low (<50%) fraction of correlated triggers inside a sector. Action Items: If you spot 1 blue box or >2 red boxes, inform the DT shifter, especially if 1) CMS is running in standard conditions, 2) enough statistics was collected, 3) no related items are listed in the short term instructions, 4) the problem appears to be new.
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  DT_04-SynchNoiseSummary_:
+    plot_number: '04'
+    folder: DT_04-SynchNoiseSummary_
+    title: SynchNoiseSummary
+    instruction: |-
+      Description: Summary of so called "synchronous noise" in the chambers. The summary is done for each sector in the 5 wheels. Legend: Chambers with a rate of sync noise events above 0.1% are reported. Subsystem Evaluation: The presence of sync noise is usually not a problem for offline reconstruction. If many red bins are present report the problem. Action Items: Report important variations to the DT shifter
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  DT_05-NoiseSummary_:
+    plot_number: '05'
+    folder: DT_05-NoiseSummary_
+    title: NoiseSummary
+    instruction: |-
+      Description: Summary of channels affected by electronic noise. The summary is done for each sector in the 5 wheels. Legend: The color scale shows the number of noisy wires in the sector. Subsystem Evaluation: The color scale is set in order to show in red sectors with many noisy wires. If many red bins are persistently present or if a clear trend of noise increase is observed in some sector, please report the problem. Action Items: Report important variations to the DT DOC
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser

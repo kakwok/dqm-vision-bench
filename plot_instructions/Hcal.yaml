@@ -1,0 +1,44 @@
+version: '1.0'
+subsystem: Hcal
+plots:
+  Hcal_00_RunSummary:
+    plot_number: '00'
+    folder: Hcal_00_RunSummary
+    title: Run Summary
+    instruction: |-
+      Cosmics / Circulating / No beam / Very low intensity beam When we are not in collisions (so, cosmics or otherwise), or if the instantaneous luminosity is just really low (maybe < 20 (ub s)^-1), the DQM plot Hcal/TPTask/SummaryvsLS/SummaryvsLS will have random yellow/red entries. An example is shown on the right, and the density may vary. The cause should be "EtMsm", TP mismatches can happen at very low energy. This can be ignored. This plot may also be completely red when there is no magnetic field. This can also be ignored in cosmics.
+
+      TP Task in Cosmics/Circulating Another Example
+
+      No beam / Very low intensity beam In addition to above, the plots Hcal/DigiTask/SummaryvsLS/SummaryvsLS and HcalReco/RecHitTask/SummaryvsLS/SummaryvsLS may have somewhat consistent yellow entries in all/some HF FEDs (1118-1123). These are probably caused by "UniSlotHF", which checks for uniform HF occupancy with a 20fC cut. This is expected behavior and should be ignored as well.
+
+      Digi Task and RecHit Task in Cosmics/Circulating
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  Hcal_13_HCALBadCapIDrotation:
+    plot_number: '13'
+    folder: Hcal_13_HCALBadCapIDrotation
+    title: HCAL Bad CapID rotation
+    instruction: |-
+      Description: Shows number of errors from bad CapID rotation error (otherwise seen also in the DigiTask summary plots) within 1 LS, for LS modulo 10. In live runs, this plot will empty itself after a while (10 LS), if there once were such errors, but they have stopped.
+
+      Bad CapID rotation If there is an audio DQM alarm due to the bad CapId rotation in HCAL, check immediately the following plot in the "Shift" workspace: (Top)/00 Shift/Errors/13 - HCAL Bad CapID rotation. Also keep an eye on the HCAL summary plots, there may be differences between here and the error plot (Problem visible in one of the plots, but not the other). If the error happens in at least 3 consecutive LS in one particular FED, or multiple different FEDs in the same LS, the data you are collecting at the moment is bad. Call the HCAL DOC to report the issue.
+
+      Error plot: This is BAD and should be reported Error plot: This can be ignored
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser
+  Hcal_14_HCALBadQualityEvents:
+    plot_number: '14'
+    folder: Hcal_14_HCALBadQualityEvents
+    title: HCAL Bad Quality Events
+    instruction: |-
+      Description: Shows percentage of events with badqualityDigis (otherwise seen also in the RawTask summary plots) in a LS, if it exceeds 5% of the total events in that LS. Here, x-axis shows LS mod 10, y-axis is FED. In live runs, this plot will empty itself after a while (10 LS), if there once were such errors, but they have stopped.
+
+      Bad Quality Event If there is an audio DQM alarm due to the bad Quality Events in HCAL, check immediately the following plot in the "Shift" workspace: (Top)/00 Shift/Errors/14 - HCAL Bad Quality Event. The data are bad while this histogram is being filled. Call the HCAL DOC to report the issue.
+
+      Error plot: This is BAD and should be reported
+    known_issues: []
+    last_updated: '2026-07-28'
+    updated_by: html_parser

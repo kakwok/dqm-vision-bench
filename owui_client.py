@@ -235,12 +235,15 @@ def build_messages(
     rag_text = retrieve_context(context, image_path=img_path, prompt=prompt)
 
     content = []
-    for ref in ref_list:
-        content.append(_image_content_block(ref))
+    if ref_list:
+        content.append({"type": "text", "text": "The following are reference images for this plot type:"})
+        for ref in ref_list:
+            content.append(_image_content_block(ref))
     if rag_text:
         label = "Instructions" if isinstance(context, YAMLContext) else "Relevant instructions"
         content.append({"type": "text", "text": f"{label}:\n\n{rag_text}"})
     if img_path:
+        content.append({"type": "text", "text": "The following is the image to be judged:"})
         content.append(_image_content_block(img_path))
     content.append({"type": "text", "text": prompt})
 
