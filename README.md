@@ -1,6 +1,55 @@
 # dqm-vision-bench
 Benchmarking vision-language models on CMS DQM plots
 
+## Quick start
+
+### 1. Install the environment
+
+The environment is managed by [pixi](https://pixi.sh) and defined in `pixi.toml`.
+
+```bash
+curl -fsSL https://pixi.sh/install.sh | sh   # install pixi (once per user)
+source ~/.bashrc                               # reload PATH
+pixi install                                   # create env from pixi.toml
+```
+
+Then register the kernel (on LPC):
+
+```bash
+pixi run python -m ipykernel install --user --name dqm-vision-bench --display-name "dqm-vision-bench"
+```
+
+### Environment contents
+
+| Package | Purpose |
+|---|---|
+| `sentence-transformers` | Embeds query text for vector search (local RAG) |
+| `langchain-huggingface` | HuggingFace backend for sentence-transformers |
+| `rank-bm25` | BM25 keyword search (hybrid RAG) |
+| `pandas`, `numpy` | Data handling |
+| `requests` | HTTP calls to OWUI / LiteLLM |
+| `python-dotenv` | Loads `.env` credentials |
+| `pyyaml` | YAML instruction lookup backend |
+| `ipykernel` | Jupyter kernel |
+
+### 2. Configure credentials
+
+Create a `.env` file in the repo root (never commit this file — it is in `.gitignore`):
+
+```bash
+# .env
+OWUI_API_KEY=<your Bearer token from OpenWebUI Settings → Account>
+OWUI_URL=https://openwebui.fnal.gov
+LITELLM_API_KEY=<your LiteLLM key>
+LITELLM_URL=<LiteLLM base URL>
+
+# Optional — sets the default model when none is specified
+# OWUI_MODEL=qwen2.5vl:latest
+# OWUI_TIMEOUT=400
+```
+
+`owui_client.py` loads this file automatically via `python-dotenv` on import.
+
 ## Setup
 
 ### Notebook output stripping (nbstripout)
