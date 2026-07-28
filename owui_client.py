@@ -192,6 +192,42 @@ class ModelConfig:
     image_token_budget: int | None = None  # Gemma 4 only; valid values: 70,140,280,560,1120
 
 
+@dataclass
+class RunMetadata:
+    """
+    Per-run context injected into each query prompt.
+
+    Current fields
+    --------------
+    event_type_map : {run_number: event_type} — appends
+                     'The plot is from a "<event_type>" event.' to the prompt.
+                     Typical values: 'collisions', 'cosmics', 'circulating'.
+
+    Planned fields
+    --------------
+    run_duration   : {run_number: float} — run duration in seconds; useful for
+                     flagging plots from very short runs as potentially unreliable.
+    fill_number    : {run_number: int} — LHC fill number; enables grouping runs
+                     by fill for trend analysis.
+    lumi_recorded  : {run_number: float} — recorded luminosity in pb^-1.
+    """
+    event_type_map: dict[int, str] = field(default_factory=dict)
+
+
+def _resolve_prompt(base_prompt: str, image_path: Path, run_metadata: "RunMetadata | None") -> str:
+    """Append event type to the prompt when run_metadata provides a mapping for this image's run."""
+    if not run_metadata or not run_metadata.event_type_map:
+        return base_prompt
+    m = re.search(r"run(\d+)", image_path.stem)
+    if not m:
+        return base_prompt
+    event = run_metadata.event_type_map.get(int(m.group(1)))
+    if not event:
+        return base_prompt
+    suffix = f'The plot is from a "{event}" event.'
+    return f"{base_prompt}\n{suffix}".strip() if base_prompt else suffix
+
+
 # ---------------------------------------------------------------------------
 # Core query — two-stage: build then send
 # ---------------------------------------------------------------------------
@@ -472,7 +508,7 @@ def batch_query_images(
     pairs: "list[tuple[str, Path]] | None" = None,
     delay: float = 1.0,
     verbose: bool = True,
-    prompt_map: "dict[Path, str] | None" = None,
+    run_metadata: "RunMetadata | None" = None,
 ) -> list[dict]:
     """
     Iterate over all images in <image_root>/<plotName>/ × each model and
@@ -480,25 +516,24 @@ def batch_query_images(
 
     Parameters
     ----------
-    prompt     : Prompt sent with every image.
-    image_root : Root folder containing per-plot subdirectories.
-    models     : List of model IDs (str) or ModelConfig objects.
-    output_root: Root folder for results.
-    run_id     : Optional string tag (e.g. 'v1', 'baseline').
-                 If given, outputs land under <output_root>/<run_id>/.
-                 If None (default), outputs overwrite previous results.
-    system     : Optional system prompt applied to all queries.
-    ref_dir    : Optional ref_images root. find_reference_images() returns all
-                 matching reference files. Leave None to send no references.
-    context    : ContextBackend controlling retrieval (LocalRAG, YAMLContext,
-                 OWUIContext, NoContext). Defaults to NoContext.
-    extensions : Image file extensions to include.
-    pairs      : Pre-built (plot_name, image_path) pairs; skips image_root scan.
-    delay      : Seconds to sleep between API calls.
-    verbose    : Print progress to stdout.
-    prompt_map : Optional {image_path: prompt} dict for per-image prompts
-                 (e.g. built from run number → event type). Takes precedence
-                 over the static `prompt` argument.
+    prompt       : Prompt sent with every image.
+    image_root   : Root folder containing per-plot subdirectories.
+    models       : List of model IDs (str) or ModelConfig objects.
+    output_root  : Root folder for results.
+    run_id       : Optional string tag (e.g. 'v1', 'baseline').
+                   If given, outputs land under <output_root>/<run_id>/.
+                   If None (default), outputs overwrite previous results.
+    system       : Optional system prompt applied to all queries.
+    ref_dir      : Optional ref_images root. find_reference_images() returns all
+                   matching reference files. Leave None to send no references.
+    context      : ContextBackend controlling retrieval (LocalRAG, YAMLContext,
+                   OWUIContext, NoContext). Defaults to NoContext.
+    extensions   : Image file extensions to include.
+    pairs        : Pre-built (plot_name, image_path) pairs; skips image_root scan.
+    delay        : Seconds to sleep between API calls.
+    verbose      : Print progress to stdout.
+    run_metadata : Optional RunMetadata with event_type_map {run_number: event_type}.
+                   Appends the event type to the prompt for each image.
 
     Returns
     -------
@@ -529,7 +564,7 @@ def batch_query_images(
             n += 1
 
             refs = find_reference_images(image_path, ref_dir) if ref_dir is not None else []
-            resolved_prompt = prompt_map[image_path] if prompt_map and image_path in prompt_map else prompt
+            resolved_prompt = _resolve_prompt(prompt, image_path, run_metadata)
 
             if verbose:
                 ref_label = ", ".join(r.name for r in refs) if refs else "none"
