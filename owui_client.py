@@ -28,19 +28,25 @@ Output layout (no run_id — overwrites):
         summary.csv
 """
 
-import ast
 import base64
 import json
 import os
 import re
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
-import numpy as np
-import pandas as pd
 import requests
 from dotenv import load_dotenv
+
+from rag_backends import (
+    ContextBackend,
+    LocalRAG,
+    NoContext,
+    OWUIContext,
+    YAMLContext,
+    retrieve_context,
+)
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -176,241 +182,8 @@ def get_knowledge_map() -> dict[str, str]:
 
 
 # ---------------------------------------------------------------------------
-# Local RAG from pre-chunked CSV
-# ---------------------------------------------------------------------------
-
-_chunks_cache: dict[str, pd.DataFrame] = {}
-_bm25_cache:   dict[str, object] = {}
-
-_NOISE_RE = re.compile(
-    r"EditAttachPDF|Edit \| Attach|TWiki\? use Discourse|"
-    r"Copyright &|If you are experiencing TWiki instability",
-)
-_FILE_LISTING_RE = re.compile(
-    r"^\s*(png|jpg|gif)\s*$", re.MULTILINE,
-)
-
-
-def _is_noise(text: str) -> bool:
-    if len(text.strip()) < 50:
-        return True
-    if _NOISE_RE.search(text):
-        return True
-    lines = [ln.strip() for ln in text.strip().splitlines() if ln.strip()]
-    manage_lines = sum(1 for ln in lines if ln == "manage" or ln == "r1")
-    if manage_lines >= 3 and manage_lines / max(len(lines), 1) > 0.15:
-        return True
-    return False
-
-
-def _load_chunks(csv_path: str | Path, filter_noise: bool = True) -> tuple[pd.DataFrame, object]:
-    key = f"{csv_path}::{filter_noise}"
-    if key not in _chunks_cache:
-        from rank_bm25 import BM25Okapi
-        df = pd.read_csv(csv_path)
-        if filter_noise:
-            keep = ~df["chunk_text"].apply(_is_noise)
-            df = df[keep].reset_index(drop=True)
-        df["_emb"] = df["embedding"].apply(
-            lambda s: np.array(ast.literal_eval(s), dtype=np.float32)
-        )
-        tokenized = [t.lower().split() for t in df["chunk_text"].tolist()]
-        _chunks_cache[key] = df
-        _bm25_cache[key]   = BM25Okapi(tokenized)
-    return _chunks_cache[key], _bm25_cache[key]
-
-
-_embedder = None
-
-def _embed_query(text: str) -> np.ndarray:
-    global _embedder
-    if _embedder is None:
-        from langchain_huggingface import HuggingFaceEmbeddings
-        _embedder = HuggingFaceEmbeddings(
-            model_name="sentence-transformers/all-MiniLM-L6-v2",
-            model_kwargs={"device": "cpu"},
-            encode_kwargs={"normalize_embeddings": True},
-        )
-    return np.array(_embedder.embed_query(text), dtype=np.float32)
-
-
-def _score_chunks(
-    query_text: str,
-    df: pd.DataFrame,
-    bm25: object,
-    method: str = "hybrid",
-    alpha: float = 0.5,
-    score_threshold: float = 0.35,
-    top_k: int = 5,
-) -> tuple[np.ndarray, np.ndarray]:
-    """Return (top_idx, scores) arrays for the best-matching chunks."""
-    q = _embed_query(query_text)
-    emb_matrix = np.stack(df["_emb"].values)
-    q_norm = q / (np.linalg.norm(q) + 1e-10)
-    row_norms = np.linalg.norm(emb_matrix, axis=1, keepdims=True) + 1e-10
-    vec_scores = (emb_matrix / row_norms) @ q_norm
-
-    if method == "threshold":
-        mask = vec_scores >= score_threshold
-        idx = np.where(mask)[0]
-        top_idx = idx[np.argsort(vec_scores[idx])[::-1]][:top_k]
-        return top_idx, vec_scores[top_idx]
-
-    elif method == "top_k":
-        top_idx = np.argsort(vec_scores)[::-1][:top_k]
-        return top_idx, vec_scores[top_idx]
-
-    else:  # hybrid
-        tokens = query_text.lower().split()
-        raw_bm25 = np.array(bm25.get_scores(tokens), dtype=np.float32)
-        bm25_scores = raw_bm25 / (raw_bm25.max() + 1e-10)
-        scores = alpha * vec_scores + (1 - alpha) * bm25_scores
-        top_idx = np.argsort(scores)[::-1][:top_k]
-        return top_idx, scores[top_idx]
-
-
-def _chunk_source_label(row: pd.Series) -> str:
-    """Extract a human-readable source label from chunk metadata."""
-    try:
-        meta = json.loads(row["metadata"].replace("'", '"'))
-    except Exception:
-        return ""
-    title = meta.get("title", "")
-    title = re.sub(r"\s*<\s*CMS\s*<\s*TWiki\s*$", "", title).strip()
-    return title
-
-
-def retrieve_chunks(
-    query_text: str,
-    csv_path: str | Path = "document_chunks.csv",
-    top_k: int = 5,
-    method: str = "hybrid",
-    alpha: float = 0.5,
-    score_threshold: float = 0.35,
-) -> str:
-    """
-    Retrieve relevant chunks from csv_path and return them as a formatted
-    context string.
-
-    Parameters
-    ----------
-    query_text       : The query to search for.
-    csv_path         : Path to document_chunks.csv.
-    top_k            : Maximum number of chunks to return (used by "top_k" and "hybrid").
-    method           : Retrieval strategy:
-                         "hybrid"    — BM25 + vector scores combined, then top_k (default)
-                         "top_k"     — vector similarity, top_k results
-                         "threshold" — vector similarity, chunks above score_threshold,
-                                       capped at top_k to avoid flooding the context window
-    alpha            : Hybrid only. Weight for vector scores; (1-alpha) goes to BM25.
-    score_threshold  : Threshold only. Minimum cosine similarity to include a chunk
-                       (0.35 is a reasonable floor for all-MiniLM-L6-v2).
-    """
-    df, bm25 = _load_chunks(csv_path)
-    top_idx, _ = _score_chunks(query_text, df, bm25, method, alpha, score_threshold, top_k)
-
-    parts = []
-    for i in top_idx:
-        row = df.iloc[i]
-        label = _chunk_source_label(row)
-        header = f"[From: {label}]\n" if label else ""
-        parts.append(f"{header}{row['chunk_text']}")
-    return "\n\n---\n\n".join(parts)
-
-
-def retrieve_and_inspect(
-    query_text: str,
-    csv_path: str | Path = "document_chunks.csv",
-    top_k: int = 5,
-    method: str = "hybrid",
-    alpha: float = 0.5,
-    score_threshold: float = 0.35,
-) -> list[dict]:
-    """
-    Debug helper: retrieve chunks and return structured metadata for each.
-
-    Returns a list of dicts with keys:
-        rank, chunk_index, document_id, source, score, text_preview, text_length
-    """
-    df, bm25 = _load_chunks(csv_path)
-    top_idx, top_scores = _score_chunks(query_text, df, bm25, method, alpha, score_threshold, top_k)
-
-    results = []
-    for rank, (i, score) in enumerate(zip(top_idx, top_scores), 1):
-        row = df.iloc[i]
-        text = row["chunk_text"]
-        results.append({
-            "rank": rank,
-            "chunk_index": int(row["chunk_index"]),
-            "document_id": int(row["document_id"]),
-            "source": _chunk_source_label(row),
-            "score": round(float(score), 4),
-            "text_preview": text[:200].replace("\n", " "),
-            "text_length": len(text),
-        })
-    return results
-
-
-# ---------------------------------------------------------------------------
-# YAML instruction store lookup
-# ---------------------------------------------------------------------------
-
-_yaml_cache: dict[str, dict] = {}
-
-def lookup_instruction(stem: str, store_dir: str | Path = "plot_instructions") -> str:
-    """
-    Return the instruction text for a plot stem from plot_instructions/<subsystem>.yaml.
-
-    Renders: description + quality_criteria + any non-expired known_issues.
-    Returns empty string if the YAML file or the stem entry does not exist.
-    """
-    subsystem = stem.split("_")[0]
-    yaml_path = Path(store_dir) / f"{subsystem}.yaml"
-    if not yaml_path.exists():
-        return ""
-
-    cache_key = str(yaml_path.resolve())
-    if cache_key not in _yaml_cache:
-        import yaml
-        with open(yaml_path, encoding="utf-8") as f:
-            _yaml_cache[cache_key] = yaml.safe_load(f)
-
-    entry = _yaml_cache.get(cache_key, {}).get("plots", {}).get(stem)
-    if not entry:
-        return ""
-
-    from datetime import date
-    today = date.today().isoformat()
-
-    parts: list[str] = []
-    if entry.get("description"):
-        parts.append(entry["description"].strip())
-    if entry.get("quality_criteria"):
-        parts.append(entry["quality_criteria"].strip())
-    for issue in entry.get("known_issues", []):
-        expires = issue.get("expires")
-        if expires and str(expires) < today:
-            continue
-        parts.append(f"Known issue: {issue['text']}")
-
-    return "\n\n".join(parts)
-
-
-# ---------------------------------------------------------------------------
 # Config dataclasses
 # ---------------------------------------------------------------------------
-
-@dataclass
-class RAGConfig:
-    """Retrieval-Augmented Generation settings."""
-    backend: str = "local"
-    csv_path: str | Path | None = None
-    top_k: int = 5
-    method: str = "hybrid"
-    alpha: float = 0.5
-    score_threshold: float = 0.35
-    collection_ids: list[str] | None = field(default=None)
-
 
 @dataclass
 class ModelConfig:
@@ -429,8 +202,8 @@ def query(
     system: str = "",
     reference_images: "list[str | Path] | str | Path | None" = None,
     image_path: str | Path | None = None,
-    rag: RAGConfig | None = None,
-    model: ModelConfig | None = None,
+    context: "ContextBackend | None" = None,
+    model: "ModelConfig | None" = None,
     no_think: bool = False,
 ) -> dict:
     """
@@ -438,7 +211,7 @@ def query(
 
     The user message is built in four ordered parts:
       1. reference_images — zero or more reference images shown before context
-      2. RAG context      — chunks from local CSV or OWUI knowledge collection
+      2. RAG context      — retrieved text from the chosen backend
       3. image_path       — the input image to evaluate
       4. prompt           — the text instruction
 
@@ -449,7 +222,8 @@ def query(
     system           : Optional system prompt.
     reference_images : Optional reference image(s) shown before RAG context.
     image_path       : Path to the input image to evaluate.
-    rag              : RAGConfig controlling retrieval backend and parameters.
+    context          : ContextBackend controlling retrieval (LocalRAG, YAMLContext,
+                       OWUIContext, NoContext). Defaults to NoContext.
     no_think         : Append /no_think to prompt and system (Qwen3 thinking models).
 
     Returns
@@ -459,14 +233,8 @@ def query(
                     response, usage, load_latency_s, generation_latency_s,
                     latency_s, error
     """
-    rag   = rag   or RAGConfig()
-    model = model or ModelConfig()
-
-    if rag.csv_path and rag.collection_ids:
-        raise ValueError(
-            "RAGConfig.csv_path and collection_ids are mutually exclusive. "
-            "Set backend='local' with csv_path, or backend='owui' with collection_ids."
-        )
+    context = context or NoContext()
+    model   = model   or ModelConfig()
 
     model_name = model.name or MODEL
 
@@ -484,27 +252,20 @@ def query(
     else:
         ref_list = [Path(r) for r in reference_images]
 
+    img_path = Path(image_path) if image_path else None
+
     content = []
 
     for ref in ref_list:
         content.append(_image_content_block(ref))
 
-    if rag.backend == "local" and rag.csv_path:
-        rag_query = Path(image_path).parent.name if image_path else prompt
-        rag_context = retrieve_chunks(
-            rag_query, csv_path=rag.csv_path, top_k=rag.top_k,
-            method=rag.method, alpha=rag.alpha, score_threshold=rag.score_threshold,
-        )
-        content.append({"type": "text", "text": f"Relevant instructions:\n\n{rag_context}"})
+    rag_text = retrieve_context(context, image_path=img_path, prompt=prompt)
+    if rag_text:
+        label = "Instructions" if isinstance(context, YAMLContext) else "Relevant instructions"
+        content.append({"type": "text", "text": f"{label}:\n\n{rag_text}"})
 
-    elif rag.backend == "yaml" and image_path:
-        stem = Path(image_path).parent.name
-        instruction = lookup_instruction(stem)
-        if instruction:
-            content.append({"type": "text", "text": f"Instructions:\n\n{instruction}"})
-
-    if image_path:
-        content.append(_image_content_block(image_path))
+    if img_path:
+        content.append(_image_content_block(img_path))
 
     content.append({"type": "text", "text": prompt})
 
@@ -518,10 +279,10 @@ def query(
         payload["model"] = model_name
     if model.image_token_budget is not None and "gemma-4" in model_name.lower():
         payload["images_config"] = {"max_soft_tokens": model.image_token_budget}
-    if rag.backend == "owui" and rag.collection_ids:
-        payload["files"] = [{"type": "collection", "id": cid} for cid in rag.collection_ids]
+    if isinstance(context, OWUIContext) and context.collection_ids:
+        payload["files"] = [{"type": "collection", "id": cid} for cid in context.collection_ids]
 
-    if rag.backend == "owui":
+    if isinstance(context, OWUIContext):
         url, headers = f"{OWUI_URL}/api/chat/completions", _OWUI_HEADERS
     else:
         url, headers = f"{LITELLM_URL}/v1/chat/completions", _LITELLM_HEADERS
@@ -566,9 +327,9 @@ def query(
         ttft = round(t_first_token - t0, 2) if t_first_token else None
         return {
             "prompt":               prompt,
-            "image":                str(image_path) if image_path else None,
+            "image":                str(img_path) if img_path else None,
             "reference_images":     [str(r) for r in ref_list],
-            "rag_backend":          rag.backend,
+            "rag_backend":          type(context).__name__,
             "model":                model_name,
             "model_used":           model_used,
             "response":             full_response,
@@ -581,9 +342,9 @@ def query(
     except Exception as e:
         return {
             "prompt":               prompt,
-            "image":                str(image_path) if image_path else None,
+            "image":                str(img_path) if img_path else None,
             "reference_images":     [str(r) for r in ref_list],
-            "rag_backend":          rag.backend,
+            "rag_backend":          type(context).__name__,
             "model":                model_name,
             "model_used":           model_name,
             "response":             None,
@@ -672,7 +433,7 @@ def batch_query_images(
     run_id: str | None = None,
     system: str = "",
     ref_dir: str | Path | None = None,
-    rag: RAGConfig | None = None,
+    context: "ContextBackend | None" = None,
     extensions: tuple[str, ...] = (".png", ".jpg", ".jpeg", ".webp"),
     pairs: "list[tuple[str, Path]] | None" = None,
     delay: float = 1.0,
@@ -695,7 +456,8 @@ def batch_query_images(
     system     : Optional system prompt applied to all queries.
     ref_dir    : Optional ref_images root. find_reference_images() returns all
                  matching reference files. Leave None to send no references.
-    rag        : RAGConfig controlling retrieval backend and parameters.
+    context    : ContextBackend controlling retrieval (LocalRAG, YAMLContext,
+                 OWUIContext, NoContext). Defaults to NoContext.
     extensions : Image file extensions to include.
     pairs      : Pre-built (plot_name, image_path) pairs; skips image_root scan.
     delay      : Seconds to sleep between API calls.
@@ -711,7 +473,7 @@ def batch_query_images(
     image_root  = Path(image_root)
     output_root = Path(output_root)
     ref_dir     = Path(ref_dir) if ref_dir else None
-    rag         = rag or RAGConfig()
+    context     = context or NoContext()
 
     if pairs is None:
         pairs = _collect_images(image_root, extensions)
@@ -748,7 +510,7 @@ def batch_query_images(
                 model=model_cfg,
                 system=system,
                 reference_images=refs,
-                rag=rag,
+                context=context,
                 image_path=image_path,
             )
             result["plot_name"] = plot_name
