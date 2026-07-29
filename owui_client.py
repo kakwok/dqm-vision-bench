@@ -116,17 +116,34 @@ def _image_content_block(image_path: str | Path) -> dict:
 def list_models(detail: bool = False) -> list:
     """
     Return available models — authenticated via LiteLLM key.
- 
+
     Parameters
     ----------
     detail : False (default) → list of model ID strings
              True            → list of full model dicts from the API
     """
     r = requests.get(f"{LITELLM_URL}/v1/models", headers=_LITELLM_HEADERS, timeout=30)
-    #r = requests.get(f'{OWUI_URL}/api/models', headers=_OWUI_HEADERS, timeout=30)
     r.raise_for_status()
     models = r.json()["data"]
     return models if detail else [m["id"] for m in models]
+
+
+def validate_models(models: "list[str | ModelConfig]") -> bool:
+    """
+    Check that every model in *models* is available on the LiteLLM server.
+    Prints a summary and returns True if all are valid, False otherwise.
+    OWUIContext models are not checked (server-side resolution).
+    """
+    available = set(list_models())
+    names = [m.name if isinstance(m, ModelConfig) else m for m in models]
+    ok = True
+    for name in names:
+        if name in available:
+            print(f"  OK  {name}")
+        else:
+            print(f"  !! UNKNOWN  {name}")
+            ok = False
+    return ok
 
 
 _stem_map_cache: dict | None = None
