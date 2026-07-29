@@ -16,7 +16,7 @@ import json
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Union, assert_never
+from typing import Union
 
 import numpy as np
 import pandas as pd
@@ -306,4 +306,4 @@ def retrieve_context(
     elif isinstance(context, OWUIContext):
         return ""
     else:
-        assert_never(context)
+        raise TypeError(f"Unhandled context backend: {type(context).__name__}")
