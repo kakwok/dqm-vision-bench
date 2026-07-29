@@ -33,7 +33,7 @@ import json
 import os
 import re
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from pathlib import Path
 
 import requests
@@ -135,14 +135,23 @@ def validate_models(models: "list[str | ModelConfig]") -> bool:
     OWUIContext models are not checked (server-side resolution).
     """
     available = set(list_models())
-    names = [m.name if isinstance(m, ModelConfig) else m for m in models]
     ok = True
-    for name in names:
-        if name in available:
-            print(f"  OK  {name}")
+    for m in models:
+        if isinstance(m, ModelConfig):
+            name = m.name
+            extras = [
+                f"{f.name}={getattr(m, f.name)}"
+                for f in fields(m)
+                if f.name != "name" and getattr(m, f.name) is not None
+            ]
+            detail = f"  ({', '.join(extras)})" if extras else ""
         else:
-            print(f"  !! UNKNOWN  {name}")
+            name = m
+            detail = ""
+        status = "OK" if name in available else "!! UNKNOWN"
+        if name not in available:
             ok = False
+        print(f"  {status}  {name}{detail}")
     return ok
 
 
@@ -585,8 +594,16 @@ def batch_query_images(
 
             if verbose:
                 ref_label = ", ".join(r.name for r in refs) if refs else "none"
+                extras = [
+                    f"{f.name}={getattr(model_cfg, f.name)}"
+                    for f in fields(model_cfg)
+                    if f.name != "name" and getattr(model_cfg, f.name) is not None
+                ]
+                model_label = model_cfg.name
+                if extras:
+                    model_label += f"[{', '.join(extras)}]"
                 print(
-                    f"[{n}/{total}] model={model_cfg.name}  "
+                    f"[{n}/{total}] model={model_label}  "
                     f"plot={plot_name}  image={image_path.name}  refs=[{ref_label}] ...",
                     end=" ", flush=True,
                 )
