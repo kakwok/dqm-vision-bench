@@ -33,7 +33,7 @@ import json
 import os
 import re
 import time
-from dataclasses import dataclass, field, fields
+from dataclasses import dataclass, field, fields, asdict
 from pathlib import Path
 
 import requests
@@ -240,7 +240,61 @@ class RunMetadata:
     event_type_map: dict[int, str] = field(default_factory=dict)
 
 
-def _resolve_prompt(base_prompt: str, image_path: Path, run_metadata: "RunMetadata | None") -> str:
+@dataclass
+class BatchConfig:
+    """Complete configuration for one batch query run."""
+    run_id: str
+    image_root: Path
+    models: list                          # list[str | ModelConfig]
+    context: "ContextBackend" = field(default_factory=lambda: NoContext())
+    system_prompt: str = ""
+    prompt: str = ""
+    output_root: Path = field(default_factory=lambda: Path("results"))
+    ref_dir: "Path | None" = None
+    plot_filter: "list[str] | None" = None
+    delay: float = 1.5
+    run_metadata: "RunMetadata | None" = None
+
+    def build_pairs(self) -> "list[tuple[str, Path]]":
+        """Collect and filter (plot_name, image_path) pairs from image_root."""
+        all_pairs = _collect_images(
+            Path(self.image_root), (".png", ".jpg", ".jpeg", ".webp")
+        )
+        if not self.plot_filter:
+            return all_pairs
+        return [(p, img) for p, img in all_pairs
+                if any(f in p for f in self.plot_filter)]
+
+    def to_dict(self) -> dict:
+        """Return a JSON-serializable representation of this config."""
+        def _context(ctx) -> dict:
+            d: dict = {"type": type(ctx).__name__}
+            for f in fields(ctx):
+                v = getattr(ctx, f.name)
+                d[f.name] = str(v) if isinstance(v, Path) else v
+            return d
+
+        def _model(m):
+            if isinstance(m, ModelConfig):
+                return {f.name: getattr(m, f.name) for f in fields(m)}
+            return m
+
+        return {
+            "run_id":        self.run_id,
+            "image_root":    str(self.image_root),
+            "output_root":   str(self.output_root),
+            "ref_dir":       str(self.ref_dir) if self.ref_dir else None,
+            "plot_filter":   self.plot_filter,
+            "models":        [_model(m) for m in self.models],
+            "context":       _context(self.context),
+            "system_prompt": self.system_prompt,
+            "prompt":        self.prompt,
+            "delay":         self.delay,
+            "run_metadata":  asdict(self.run_metadata) if self.run_metadata else None,
+        }
+
+
+def resolve_prompt(base_prompt: str, image_path: Path, run_metadata: "RunMetadata | None") -> str:
     """Append event type to the prompt when run_metadata provides a mapping for this image's run."""
     if not run_metadata or not run_metadata.event_type_map:
         return base_prompt
@@ -590,7 +644,7 @@ def batch_query_images(
             n += 1
 
             refs = find_reference_images(image_path, ref_dir) if ref_dir is not None else []
-            resolved_prompt = _resolve_prompt(prompt, image_path, run_metadata)
+            resolved_prompt = resolve_prompt(prompt, image_path, run_metadata)
 
             if verbose:
                 ref_label = ", ".join(r.name for r in refs) if refs else "none"
@@ -649,3 +703,79 @@ def batch_query_images(
 
     return results
 
+
+# ---------------------------------------------------------------------------
+# BatchConfig helpers
+# ---------------------------------------------------------------------------
+
+def run_batch(config: BatchConfig, pairs: "list | None" = None) -> list[dict]:
+    """Run a full batch query from a BatchConfig. Builds pairs from config if not provided."""
+    resolved_pairs = pairs if pairs is not None else config.build_pairs()
+
+    out_root = Path(config.output_root)
+    run_dir = out_root / config.run_id if config.run_id else out_root
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    config_path = run_dir / f"config_{config.run_id or 'run'}.json"
+    with open(config_path, "w") as fh:
+        json.dump(config.to_dict(), fh, indent=2)
+    print(f"Config saved: {config_path}")
+
+    return batch_query_images(
+        config.prompt,
+        image_root=config.image_root,
+        models=config.models,
+        output_root=config.output_root,
+        run_id=config.run_id,
+        system=config.system_prompt,
+        ref_dir=config.ref_dir,
+        context=config.context,
+        pairs=resolved_pairs,
+        delay=config.delay,
+        verbose=True,
+        run_metadata=config.run_metadata,
+    )
+
+
+def sanity_check(config: BatchConfig, pairs: list) -> None:
+    """Print a pre-flight summary for a BatchConfig."""
+    ref_dir = Path(config.ref_dir) if config.ref_dir else None
+    plot_names = sorted(set(p for p, _ in pairs))
+
+    print(f"Run ID       : {config.run_id or '(none — overwrite mode)'}")
+    print(f"Image root   : {config.image_root}")
+    print(f"Output root  : {config.output_root}")
+    print(f"Context      : {config.context!r}")
+    print(f"Run metadata : {config.run_metadata!r}")
+
+    print(f"\nPlots found  : {len(plot_names)}")
+    for pn in plot_names:
+        imgs = [img for p, img in pairs if p == pn]
+        print(f"  {pn}/  ({len(imgs)} images)")
+        for img in imgs:
+            refs = find_reference_images(img, ref_dir) if ref_dir else []
+            if refs:
+                for r in refs:
+                    print(f"    {img.name}  ← {r.name}")
+            else:
+                print(f"    {img.name}  ← (no reference)")
+
+    if ref_dir and ref_dir.exists():
+        covered = sum(1 for _, img in pairs if find_reference_images(img, ref_dir))
+        print(f"\nReference dir: {ref_dir}/  ({covered}/{len(pairs)} images have references)")
+    else:
+        print(f"\nReference dir: {ref_dir} — not found, reference images will be skipped")
+
+    print(f"\nModels ({len(config.models)}):")
+    validate_models(config.models)
+
+    print(f"\nTotal queries: {len(pairs) * len(config.models)}")
+
+    if pairs:
+        print("\nExample output paths:")
+        for model in config.models:
+            model_name = model.name if isinstance(model, ModelConfig) else model
+            pn, img = pairs[0]
+            d = resolve_output_dir(Path(config.output_root), pn, config.run_id)
+            f = resolve_output_file(d, img, model_name)
+            print(f"  {f}")
