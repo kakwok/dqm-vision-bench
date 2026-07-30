@@ -30,7 +30,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from owui_client import query, ModelConfig, RAGConfig
+from owui_client import query, ModelConfig
+from rag_backends import NoContext
 
 # display() is built-in in Jupyter; fall back to print when running as a script
 try:
@@ -145,9 +146,16 @@ def load_all_results(output_root: Path, run_ids: list, variants: list,
     rows = []
     for run_id in run_ids:
         for variant in variants:
-            run_dir = output_root / f'{run_id}_{variant}'
-            if not run_dir.exists():
-                print(f'  WARNING: {run_dir} not found — skipping')
+            # Support both flat layout (results/<run_id>/) and legacy
+            # variant layout (results/<run_id>_<variant>/).
+            flat_dir   = output_root / run_id if run_id else output_root
+            legacy_dir = output_root / f'{run_id}_{variant}' if run_id else output_root / variant
+            if flat_dir.exists() and not legacy_dir.exists():
+                run_dir = flat_dir
+            elif legacy_dir.exists():
+                run_dir = legacy_dir
+            else:
+                print(f'  WARNING: {legacy_dir} (and {flat_dir}) not found — skipping')
                 continue
 
             for txt in sorted(run_dir.rglob('*.txt')):
@@ -282,7 +290,7 @@ def judge(truth_text: str, response_text: str, model: str) -> dict:
     prompt = JUDGE_PROMPT_TEMPLATE.format(truth=truth_text, response=response_text)
     # Judge is text-only: no image, no RAG — use an empty RAGConfig to skip retrieval.
     result = query(prompt, model=ModelConfig(name=model), system=JUDGE_SYSTEM,
-                   rag=RAGConfig(backend="local"))
+                   context=NoContext())
     if result.get('error'):
         return {'error': f"API error: {result['error']}"}
     response_raw = result.get('response') or ''
