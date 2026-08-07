@@ -400,12 +400,23 @@ def run_evaluations(
         print('No scores produced. Check truth files exist and model names are correct.')
         return df_eval
 
-    df_eval['s4_correct'] = (df_eval['s4_decision'] >= 3)
-    df_eval['image_quality'] = np.where(
-        df_eval['image'].astype(str).apply(lambda s: '_bad' in Path(s).stem),
+    return _add_derived_cols(df_eval)
+
+
+def load_eval_csv(eval_csv: Path) -> pd.DataFrame:
+    """Load a saved eval_scores.csv and recompute derived columns."""
+    df = pd.read_csv(eval_csv)
+    return _add_derived_cols(df)
+
+
+def _add_derived_cols(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.copy()
+    df['s4_correct'] = (df['s4_decision'] >= 3)
+    df['image_quality'] = np.where(
+        df['image'].astype(str).apply(lambda s: '_bad' in Path(s).stem),
         'bad', 'good',
     )
-    return df_eval
+    return df
 
 
 # ── Reports (text) ─────────────────────────────────────────────────────────────
