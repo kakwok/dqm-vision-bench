@@ -464,7 +464,7 @@ def plot_section_heatmap(
     out_path: Path,
 ) -> None:
     """Heatmap: rows = row_col values, columns = sections, cells = mean score."""
-    row_vals = sorted(df_eval[row_col].dropna().unique())
+    row_vals = sorted(df_eval[row_col].dropna().unique(), key=str)
     pivot    = df_eval.groupby(row_col)[SCORE_COLS].mean().reindex(row_vals)
 
     fig, ax = plt.subplots(figsize=(9, max(2.5, 0.55 * len(row_vals) + 1.5)))
@@ -492,7 +492,7 @@ def plot_s4_accuracy(
     out_path: Path,
 ) -> None:
     """Bar chart of S4 (Good/Bad) decision accuracy per row_col value."""
-    row_vals = sorted(df_eval[row_col].dropna().unique())
+    row_vals = sorted(df_eval[row_col].dropna().unique(), key=str)
     acc      = df_eval.groupby(row_col)['s4_correct'].mean().mul(100).reindex(row_vals)
     colors   = plt.cm.Set1(np.linspace(0, 1, len(row_vals)))
 
@@ -519,7 +519,7 @@ def plot_latency(
     out_path: Path,
 ) -> None:
     """Bar chart of mean generation latency per row_col value."""
-    row_vals = sorted(df[row_col].dropna().unique())
+    row_vals = sorted(df[row_col].dropna().unique(), key=str)
     lat      = df.groupby(row_col)['generation_latency_s'].mean().reindex(row_vals)
     colors   = plt.cm.Set1(np.linspace(0, 1, len(row_vals)))
 
@@ -553,8 +553,8 @@ def plot_comparison(
     Example: compare_col='run_id', row_col='model'
       → for each model, shows localRAG vs YAML bars side-by-side per section.
     """
-    row_vals     = sorted(df_eval[row_col].dropna().unique())
-    compare_vals = sorted(df_eval[compare_col].dropna().unique())
+    row_vals     = sorted(df_eval[row_col].dropna().unique(), key=str)
+    compare_vals = sorted(df_eval[compare_col].dropna().unique(), key=str)
     colors       = plt.cm.Set2(np.linspace(0, 1, len(compare_vals)))
 
     x     = np.arange(len(SCORE_COLS))
