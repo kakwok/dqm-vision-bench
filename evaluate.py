@@ -9,6 +9,7 @@ Import this module; do not run it directly.
 import re
 import json
 import time
+import textwrap
 from pathlib import Path
 
 import numpy as np
@@ -294,6 +295,17 @@ def truth_coverage(df: pd.DataFrame, truth_root: Path) -> pd.DataFrame:
     cov = pd.DataFrame(rows).sort_values(['plot_name', 'image']).reset_index(drop=True)
     n   = cov['has_truth'].sum()
     print(f'Truth coverage: {n}/{len(cov)} images have truth files')
+
+    if 'model_short' in df.columns:
+        by_model = (
+            df[['model_short', 'plot_name', 'image_name']]
+            .merge(cov, left_on=['plot_name', 'image_name'], right_on=['plot_name', 'image'])
+            .groupby('model_short')['has_truth']
+            .agg(has_truth='sum', n_images='count')
+        )
+        print('\n=== Truth coverage by model ===')
+        display(by_model)
+
     return cov
 
 
@@ -427,16 +439,17 @@ def _extract_run_number(image_str: str) -> 'int | None':
 
 
 def _add_run_subsystem_cols(df: pd.DataFrame) -> pd.DataFrame:
-    """Add 'run_number' (int, from image filename) and 'subsystem' (from plot_name prefix)."""
+    """Add 'model_short' (provider-stripped model id), 'run_number' (int, from image
+    filename), and 'subsystem' (from plot_name prefix)."""
     df = df.copy()
-    df['run_number'] = df['image'].apply(_extract_run_number)
-    df['subsystem']  = df['plot_name'].astype(str).apply(lambda s: s.split('_')[0])
+    df['model_short'] = df['model'].astype(str).apply(short_name)
+    df['run_number']  = df['image'].apply(_extract_run_number)
+    df['subsystem']   = df['plot_name'].astype(str).apply(lambda s: s.split('_')[0])
     return df
 
 
 def _add_derived_cols(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
-    df['model_short'] = df['model'].astype(str).apply(short_name)
     df['s4_correct'] = (df['s4_decision'] >= 3)
     df['image_quality'] = np.where(
         df['image'].astype(str).apply(lambda s: '_bad' in Path(s).stem),
@@ -448,7 +461,7 @@ def _add_derived_cols(df: pd.DataFrame) -> pd.DataFrame:
 
 # ── Reports (text) ─────────────────────────────────────────────────────────────
 
-def report_latency(df: pd.DataFrame, group_col: str = 'model') -> None:
+def report_latency(df: pd.DataFrame, group_col: str = 'model_short') -> None:
     """Print latency statistics from the raw results DataFrame."""
     print(f'=== Generation latency by {group_col} ===')
     display(
@@ -486,6 +499,170 @@ def report_scores(df_eval: pd.DataFrame, group_col: str = 'model') -> None:
     )
 
 
+# Section markers the response/truth text is structured around. The model is
+# instructed (see batch_query.ipynb SYSTEM_PROMPT) to answer in exactly these
+# 4 sections; truth files follow a matching fixed template. 'overall' has no
+# corresponding section in either text — it's a holistic judge score.
+_RESPONSE_SECTION_MARKERS = {
+    's1_instruction_quote': 'Instructions',
+    's2_plot_description':  'Observations',
+    's3_comparison':        'Assessment',
+    's4_decision':          'Verdict',
+}
+_TRUTH_SECTION_MARKERS = {
+    's1_instruction_quote': 'Quote',
+    's2_plot_description':  'Describe',
+    's3_comparison':        'Compare',
+    's4_decision':          'Decide',
+}
+
+
+def _split_sections(text: 'str | None', markers: dict, keep_same_line: bool = True) -> dict:
+    """
+    Split free-form text into {score_col: content} based on lines that open a
+    new section — a line that, after stripping markdown decoration (#, *, -,
+    >, whitespace), starts with one of `markers`' values (case-insensitive).
+
+    keep_same_line: if True, text following the marker on its own line (e.g.
+      "Verdict: GOOD") is kept as the start of that section's content; if
+      False (used for truth files, whose marker line is itself boilerplate
+      instruction text, not ground truth), that remainder is discarded and
+      content is only collected from subsequent lines.
+    """
+    cols = list(markers.keys())
+    if not text:
+        return {c: '' for c in cols}
+
+    label_to_col = {v.lower(): k for k, v in markers.items()}
+    pattern = re.compile(
+        r'^[#>\-\*\s]*(' + '|'.join(re.escape(v) for v in markers.values()) + r')\b[:\s\*#_]*',
+        re.IGNORECASE,
+    )
+    collected = {c: [] for c in cols}
+    current = None
+    for line in str(text).splitlines():
+        m = pattern.match(line)
+        if m:
+            current = label_to_col[m.group(1).lower()]
+            if keep_same_line:
+                rest = line[m.end():].strip()
+                if rest:
+                    collected[current].append(rest)
+            continue
+        if current is not None:
+            collected[current].append(line)
+    return {c: '\n'.join(v).strip() for c, v in collected.items()}
+
+
+def _wrap_cell(text: 'str | None', width: int) -> 'list[str]':
+    if not text:
+        return ['']
+    lines = []
+    for para in str(text).splitlines() or ['']:
+        lines.extend(textwrap.wrap(para, width=width) or [''])
+    return lines or ['']
+
+
+def _print_section_table(rows: 'list[dict]', columns: 'list[tuple[str, int]]') -> None:
+    """Print rows as a fixed-width, word-wrapped text table (no pandas repr)."""
+    rule = '+' + '+'.join('-' * (w + 2) for _, w in columns) + '+'
+    print(rule)
+    print('| ' + ' | '.join(h.ljust(w) for h, w in columns) + ' |')
+    print(rule)
+    for row in rows:
+        wrapped = {h: _wrap_cell(row.get(h, ''), w) for h, w in columns}
+        for i in range(max(len(v) for v in wrapped.values())):
+            cells = [
+                (wrapped[h][i] if i < len(wrapped[h]) else '').ljust(w)
+                for h, w in columns
+            ]
+            print('| ' + ' | '.join(cells) + ' |')
+        print(rule)
+
+
+def browse_responses(
+    df: pd.DataFrame,
+    df_eval: 'pd.DataFrame | None' = None,
+    truth_root: 'Path | None' = None,
+    *,
+    run_id=None,
+    plot_name=None,
+    model=None,
+    image_name=None,
+    judge_model=None,
+    run_number=None,
+    n: 'int | None' = 5,
+    width: int = 40,
+) -> pd.DataFrame:
+    """
+    Debugging printout of individual responses. For each matching response,
+    prints a metadata header followed by a table with one row per section
+    (s1_instruction_quote, s2_plot_description, s3_comparison, s4_decision,
+    overall) and columns: score, response (that section's slice of the raw
+    response text), truth (that section's slice of the truth text, if
+    truth_root is given), and the judge's comment (if df_eval is given).
+
+    run_id, plot_name, model, image_name, judge_model, run_number — filter
+      controls, same convention as the plot functions: None (default)
+      includes everything, a single value is an exact match, and a list
+      restricts to those values. judge_model only has an effect when df_eval
+      is given — a single raw response can match more than one judge_model,
+      producing one printout each.
+    n — cap the number of responses shown (None = no cap; default 5).
+    width — wrap width, in characters, for the response/truth/comment columns.
+
+    Returns the flat (non-split) matches as a DataFrame for further use —
+    printing is a side effect.
+    """
+    if df_eval is not None:
+        eval_cols = ['file', 'judge_model'] + SCORE_COLS + [f'{c}_comment' for c in SCORE_COLS]
+        merged = df.merge(df_eval[eval_cols], on='file', how='left')
+    else:
+        merged = df.copy()
+        merged['judge_model'] = None
+
+    sub_all = _apply_filters(
+        merged, run_id=run_id, plot_name=plot_name, model=model,
+        image_name=image_name, judge_model=judge_model, run_number=run_number,
+    )
+    sub = sub_all.head(n) if n is not None else sub_all
+
+    print(f'{len(sub)} of {len(sub_all)} matching response(s) shown\n')
+
+    columns = [('section', 15), ('score', 5), ('response', width),
+               ('truth', width), ('comment', width)]
+
+    for _, row in sub.iterrows():
+        print('=' * 100)
+        print(f"run_id={row['run_id']}  model={row.get('model_short', row['model'])}  "
+              f"plot={row['plot_name']}  image={row['image_name']}  "
+              f"judge={row.get('judge_model') or '—'}  latency={row.get('latency_s')}s")
+        if row.get('error'):
+            print(f"ERROR: {row['error']}")
+
+        truth_text = None
+        if truth_root is not None:
+            tf = find_truth_file(truth_root, row['plot_name'], row['image'])
+            truth_text = tf.read_text().strip() if tf else None
+
+        response_parts = _split_sections(row.get('response'), _RESPONSE_SECTION_MARKERS)
+        truth_parts     = _split_sections(truth_text, _TRUTH_SECTION_MARKERS, keep_same_line=False)
+
+        table_rows = []
+        for score_col, label in zip(SCORE_COLS, SECTION_LABELS):
+            table_rows.append({
+                'section':  label,
+                'score':    row.get(score_col, ''),
+                'response': response_parts.get(score_col, ''),
+                'truth':    truth_parts.get(score_col, ''),
+                'comment':  row.get(f'{score_col}_comment', ''),
+            })
+        _print_section_table(table_rows, columns)
+        print()
+
+    return sub_all.reset_index(drop=True)
+
+
 # ── Plots ──────────────────────────────────────────────────────────────────────
 
 def _save(fig, out_path: 'Path | None' = None) -> None:
@@ -511,14 +688,19 @@ def _apply_filters(df: pd.DataFrame, **filters) -> pd.DataFrame:
       val is None                  -> no filtering (include all, the default)
       val is a scalar               -> exact match
       val is a list/tuple/set       -> restrict to the given values
+
+    The `model` filter matches against both the full `model` column and the
+    provider-stripped `model_short` column, so callers can pass either form
+    (or a mix of both) without needing to know which one a given value is.
     """
     for col, val in filters.items():
         if val is None:
             continue
-        if isinstance(val, (list, tuple, set)):
-            df = df[df[col].isin(val)]
+        vals = val if isinstance(val, (list, tuple, set)) else [val]
+        if col == 'model' and 'model_short' in df.columns:
+            df = df[df[col].isin(vals) | df['model_short'].isin(vals)]
         else:
-            df = df[df[col] == val]
+            df = df[df[col].isin(vals)]
     return df
 
 
@@ -528,6 +710,7 @@ def plot_section_heatmap(
     title: str,
     out_path: 'Path | None' = None,
     *,
+    subplot_col: 'str | None' = None,
     run_id=None,
     plot_name=None,
     model=None,
@@ -536,43 +719,70 @@ def plot_section_heatmap(
     """
     Heatmap: rows = row_col values, columns = sections, cells = agg(score).
 
+    subplot_col: optional — if given, draws one heatmap panel per
+      subplot_col value (e.g. one per model), stacked as separate Axes in a
+      single figure, each with its own row_col rows (e.g. run_id). Mirrors
+      plot_comparison's "one subplot per row_col" behavior, but rendered as
+      heatmaps instead of grouped bars.
+
     Dimensions:
       run_id, plot_name, model — filter controls, each either None (include
         all, default), an exact value, or a list of values to restrict to.
-        row_col is typically one of these three (the axis being compared).
+        row_col (and subplot_col, if used) is typically one of these three
+        (the axis/axes being compared).
       run_number — never filtered; always collapsed via `agg`
         ('mean' default, 'median', or 'std').
 
-    Returns the Axes for further styling.
+    Returns the Axes (single panel) or a list of Axes (one per subplot_col
+    value) for further styling.
     """
-    sub      = _apply_filters(df_eval, run_id=run_id, plot_name=plot_name, model=model)
-    row_vals = sorted(sub[row_col].dropna().unique(), key=str)
-    pivot    = sub.groupby(row_col)[SCORE_COLS].agg(agg).reindex(row_vals)
+    sub_all = _apply_filters(df_eval, run_id=run_id, plot_name=plot_name, model=model)
+    panels  = (
+        sorted(sub_all[subplot_col].dropna().unique(), key=str)
+        if subplot_col is not None else [None]
+    )
 
     if agg == 'std':
-        vmin, vmax = 0, float(np.nanmax(pivot.values)) if np.isfinite(pivot.values).any() else 1
+        all_vals   = sub_all[SCORE_COLS].values
+        vmin, vmax = 0, float(np.nanmax(all_vals)) if np.isfinite(all_vals).any() else 1
         cmap, cbar_label = 'YlOrRd', 'std dev'
     else:
         vmin, vmax = 1, 5
         cmap, cbar_label = 'RdYlGn', f'{agg} score (1–5)'
 
-    fig, ax = plt.subplots(figsize=(9, max(2.5, 0.55 * len(row_vals) + 1.5)))
-    im = ax.imshow(pivot.values, cmap=cmap, vmin=vmin, vmax=vmax, aspect='auto')
-    ax.set_xticks(range(len(SCORE_COLS)))
-    ax.set_xticklabels(SECTION_LABELS, rotation=20, ha='right', fontsize=9)
-    ax.set_yticks(range(len(row_vals)))
-    ax.set_yticklabels([short_name(str(v)) for v in row_vals], fontsize=9)
-    ax.set_title(title, fontsize=10)
-    plt.colorbar(im, ax=ax, label=cbar_label)
-    for i in range(len(row_vals)):
-        for j in range(len(SCORE_COLS)):
-            v = pivot.values[i, j]
-            if pd.notna(v):
-                ax.text(j, i, f'{v:.1f}', ha='center', va='center',
-                        fontsize=9, fontweight='bold')
+    panel_data = []
+    for panel_val in panels:
+        panel_sub = sub_all if panel_val is None else sub_all[sub_all[subplot_col] == panel_val]
+        row_vals  = sorted(panel_sub[row_col].dropna().unique(), key=str)
+        pivot     = panel_sub.groupby(row_col)[SCORE_COLS].agg(agg).reindex(row_vals)
+        panel_data.append((panel_val, row_vals, pivot))
+
+    heights = [max(2.5, 0.55 * len(row_vals) + 1.5) for _, row_vals, _ in panel_data]
+    fig, axes = plt.subplots(
+        len(panel_data), 1, figsize=(9, sum(heights)),
+        gridspec_kw={'height_ratios': heights}, squeeze=False,
+    )
+
+    for i, (panel_val, row_vals, pivot) in enumerate(panel_data):
+        ax = axes[i, 0]
+        im = ax.imshow(pivot.values, cmap=cmap, vmin=vmin, vmax=vmax, aspect='auto')
+        ax.set_xticks(range(len(SCORE_COLS)))
+        ax.set_xticklabels(SECTION_LABELS, rotation=20, ha='right', fontsize=9)
+        ax.set_yticks(range(len(row_vals)))
+        ax.set_yticklabels([short_name(str(v)) for v in row_vals], fontsize=9)
+        panel_title = title if panel_val is None else f'{title}  |  {short_name(str(panel_val))}'
+        ax.set_title(panel_title, fontsize=10)
+        plt.colorbar(im, ax=ax, label=cbar_label)
+        for r in range(len(row_vals)):
+            for c in range(len(SCORE_COLS)):
+                v = pivot.values[r, c]
+                if pd.notna(v):
+                    ax.text(c, r, f'{v:.1f}', ha='center', va='center',
+                            fontsize=9, fontweight='bold')
+
     plt.tight_layout()
     _save(fig, out_path)
-    return ax
+    return axes[0, 0] if subplot_col is None else list(axes[:, 0])
 
 
 def plot_s4_accuracy(
@@ -622,17 +832,20 @@ def plot_histogram(
     title: str,
     out_path: 'Path | None' = None,
     *,
+    xlabel: 'str | None' = None,
     run_id=None,
     plot_name=None,
     model=None,
     agg: str = 'mean',
     bins: int = 20,
     overlay: bool = False,
-    cms_label: 'str | None' = 'Private Work',
 ):
     """
     Histogram of value_col (1D output, e.g. latency) split by row_col value.
-    Rendered with mplhep in CMS style when mplhep is available.
+    Rendered with mplhep in CMS style when mplhep is available (axis styling
+    only — no "CMS ..." experiment label is drawn).
+
+    xlabel: x-axis label; defaults to value_col if not given.
 
     Same dimensions and controls as plot_section_heatmap:
       run_id, plot_name, model — filter controls (None = all, exact value,
@@ -646,11 +859,8 @@ def plot_histogram(
       shared Axes — use this to compare several models/run_ids on one plot
       instead of scrolling through subplots.
 
-    cms_label: text passed to mplhep.cms.label() on the top subplot
-      (e.g. 'Preliminary', 'Private Work'); set to None to skip it.
-
-    Returns the Axes (overlay, or a single row_col value) or the array of Axes
-    (one per row_col value) for further styling.
+    Returns (fig, Axes) — a single Axes for overlay or a single row_col value,
+    or (fig, array of Axes) one per row_col value otherwise.
     """
     sub      = _apply_filters(df, run_id=run_id, plot_name=plot_name, model=model)
     row_vals = sorted(sub[row_col].dropna().unique(), key=str)
@@ -662,16 +872,16 @@ def plot_histogram(
     n_axes = 1 if overlay else len(row_vals)
     style_ctx = plt.style.context(hep.style.CMS) if _HAS_MPLHEP else plt.style.context({})
     with style_ctx:
-        fig, axes = plt.subplots(n_axes, 1, figsize=(8, 5 * n_axes), squeeze=False)
+        fig, axes = plt.subplots(n_axes, 1, figsize=(8, 6 * n_axes), squeeze=False)
         for i, val in enumerate(row_vals):
             ax   = axes[0, 0] if overlay else axes[i, 0]
             vals = sub.loc[sub[row_col] == val, value_col].dropna()
 
             if len(vals):
                 reduced = vals.agg(agg)
-                label   = f'{row_col}={short_name(str(val))}  ({agg}={reduced:.2f}, n={len(vals)})'
+                label   = f'{short_name(str(val))} ({agg}={reduced:.2f})'
             else:
-                reduced, label = None, f'{row_col}={short_name(str(val))}'
+                reduced, label = None, short_name(str(val))
 
             color = mcolors.to_hex(colors[i])
             if _HAS_MPLHEP:
@@ -693,27 +903,23 @@ def plot_histogram(
                           linestyle='--', linewidth=1.2)
 
             if not overlay:
-                ax.set_xlabel(value_col)
+                ax.set_xlabel(xlabel or value_col)
                 ax.set_ylabel('count')
                 ax.legend(fontsize=9, loc='upper right')
-                if cms_label and _HAS_MPLHEP and i == 0:
-                    hep.cms.label(ax=ax, data=True, label=cms_label)
 
         if overlay:
             ax = axes[0, 0]
-            ax.set_xlabel(value_col)
+            ax.set_xlabel(xlabel or value_col)
             ax.set_ylabel('count')
             ax.legend(fontsize=9, loc='upper right')
-            if cms_label and _HAS_MPLHEP:
-                hep.cms.label(ax=ax, data=True, label=cms_label)
 
         fig.suptitle(title, fontsize=14, fontweight='bold')
         plt.tight_layout()
         _save(fig, out_path)
 
     if overlay or len(row_vals) <= 1:
-        return axes[0, 0]
-    return axes
+        return fig, axes[0, 0]
+    return fig, axes
 
 
 def plot_latency(
@@ -728,13 +934,16 @@ def plot_latency(
     agg: str = 'mean',
     bins: int = 20,
     overlay: bool = False,
-    cms_label: 'str | None' = 'Private Work',
 ):
-    """Histogram of generation latency per row_col value. See plot_histogram."""
+    """
+    Histogram of generation latency per row_col value. See plot_histogram.
+    Returns (fig, Axes).
+    """
     return plot_histogram(
         df, row_col, 'generation_latency_s', title, out_path,
+        xlabel='Generation latency (s)',
         run_id=run_id, plot_name=plot_name, model=model, agg=agg, bins=bins,
-        overlay=overlay, cms_label=cms_label,
+        overlay=overlay,
     )
 
 
