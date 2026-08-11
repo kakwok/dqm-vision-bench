@@ -14,6 +14,14 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
+
+try:
+    import mplhep as hep
+    _HAS_MPLHEP = True
+except ImportError:
+    hep = None
+    _HAS_MPLHEP = False
 
 from owui_client import query, ModelConfig
 from rag_backends import NoContext
@@ -237,6 +245,7 @@ def load_results(
           .drop(columns='mtime')
           .reset_index(drop=True)
     )
+    df = _add_run_subsystem_cols(df)
     if len(df) < before:
         print(f'  Deduplicated {before} → {len(df)} '
               f'(dropped {before - len(df)} older duplicates)')
@@ -379,10 +388,12 @@ def run_evaluations(
                 'judge_model':          judge_model,
                 'generation_latency_s': row.get('generation_latency_s'),
                 'latency_s':            row.get('latency_s'),
-                **{k:              v['score']   if isinstance(v, dict) else None
-                   for k, v in scores.items()},
-                **{f'{k}_comment': v['comment'] if isinstance(v, dict) else None
-                   for k, v in scores.items()},
+                **{k:              scores.get(k, {}).get('score')
+                   if isinstance(scores.get(k), dict) else None
+                   for k in SCORE_COLS},
+                **{f'{k}_comment': scores.get(k, {}).get('comment')
+                   if isinstance(scores.get(k), dict) else None
+                   for k in SCORE_COLS},
             }
             new_rows.append(new_row)
             done.add((row['file'], judge_model))
@@ -409,13 +420,29 @@ def load_eval_csv(eval_csv: Path) -> pd.DataFrame:
     return _add_derived_cols(df)
 
 
+def _extract_run_number(image_str: str) -> 'int | None':
+    """Pull the numeric DQM run number out of an image filename (e.g. 'run398185' -> 398185)."""
+    m = re.search(r'run(\d+)', Path(str(image_str)).stem)
+    return int(m.group(1)) if m else None
+
+
+def _add_run_subsystem_cols(df: pd.DataFrame) -> pd.DataFrame:
+    """Add 'run_number' (int, from image filename) and 'subsystem' (from plot_name prefix)."""
+    df = df.copy()
+    df['run_number'] = df['image'].apply(_extract_run_number)
+    df['subsystem']  = df['plot_name'].astype(str).apply(lambda s: s.split('_')[0])
+    return df
+
+
 def _add_derived_cols(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
+    df['model_short'] = df['model'].astype(str).apply(short_name)
     df['s4_correct'] = (df['s4_decision'] >= 3)
     df['image_quality'] = np.where(
         df['image'].astype(str).apply(lambda s: '_bad' in Path(s).stem),
         'bad', 'good',
     )
+    df = _add_run_subsystem_cols(df)
     return df
 
 
@@ -461,31 +488,82 @@ def report_scores(df_eval: pd.DataFrame, group_col: str = 'model') -> None:
 
 # ── Plots ──────────────────────────────────────────────────────────────────────
 
-def _save(fig, out_path: Path) -> None:
-    Path(out_path).parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(out_path, dpi=150, bbox_inches='tight')
+def _save(fig, out_path: 'Path | None' = None) -> None:
+    if out_path is not None:
+        Path(out_path).parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(out_path, dpi=150, bbox_inches='tight')
+        print(f'Saved: {out_path}')
+    try:
+        get_ipython()
+    except NameError:
+        pass
+    else:
+        from IPython.display import display as ipy_display
+        ipy_display(fig)
     plt.close(fig)
-    print(f'Saved: {out_path}')
+
+
+def _apply_filters(df: pd.DataFrame, **filters) -> pd.DataFrame:
+    """
+    Apply exact/list/default filters to df columns.
+
+    For each `col=val` kwarg:
+      val is None                  -> no filtering (include all, the default)
+      val is a scalar               -> exact match
+      val is a list/tuple/set       -> restrict to the given values
+    """
+    for col, val in filters.items():
+        if val is None:
+            continue
+        if isinstance(val, (list, tuple, set)):
+            df = df[df[col].isin(val)]
+        else:
+            df = df[df[col] == val]
+    return df
 
 
 def plot_section_heatmap(
     df_eval: pd.DataFrame,
     row_col: str,
     title: str,
-    out_path: Path,
-) -> None:
-    """Heatmap: rows = row_col values, columns = sections, cells = mean score."""
-    row_vals = sorted(df_eval[row_col].dropna().unique(), key=str)
-    pivot    = df_eval.groupby(row_col)[SCORE_COLS].mean().reindex(row_vals)
+    out_path: 'Path | None' = None,
+    *,
+    run_id=None,
+    plot_name=None,
+    model=None,
+    agg: str = 'mean',
+):
+    """
+    Heatmap: rows = row_col values, columns = sections, cells = agg(score).
+
+    Dimensions:
+      run_id, plot_name, model — filter controls, each either None (include
+        all, default), an exact value, or a list of values to restrict to.
+        row_col is typically one of these three (the axis being compared).
+      run_number — never filtered; always collapsed via `agg`
+        ('mean' default, 'median', or 'std').
+
+    Returns the Axes for further styling.
+    """
+    sub      = _apply_filters(df_eval, run_id=run_id, plot_name=plot_name, model=model)
+    row_vals = sorted(sub[row_col].dropna().unique(), key=str)
+    pivot    = sub.groupby(row_col)[SCORE_COLS].agg(agg).reindex(row_vals)
+
+    if agg == 'std':
+        vmin, vmax = 0, float(np.nanmax(pivot.values)) if np.isfinite(pivot.values).any() else 1
+        cmap, cbar_label = 'YlOrRd', 'std dev'
+    else:
+        vmin, vmax = 1, 5
+        cmap, cbar_label = 'RdYlGn', f'{agg} score (1–5)'
 
     fig, ax = plt.subplots(figsize=(9, max(2.5, 0.55 * len(row_vals) + 1.5)))
-    im = ax.imshow(pivot.values, cmap='RdYlGn', vmin=1, vmax=5, aspect='auto')
+    im = ax.imshow(pivot.values, cmap=cmap, vmin=vmin, vmax=vmax, aspect='auto')
     ax.set_xticks(range(len(SCORE_COLS)))
     ax.set_xticklabels(SECTION_LABELS, rotation=20, ha='right', fontsize=9)
     ax.set_yticks(range(len(row_vals)))
     ax.set_yticklabels([short_name(str(v)) for v in row_vals], fontsize=9)
     ax.set_title(title, fontsize=10)
-    plt.colorbar(im, ax=ax, label='mean score (1–5)')
+    plt.colorbar(im, ax=ax, label=cbar_label)
     for i in range(len(row_vals)):
         for j in range(len(SCORE_COLS)):
             v = pivot.values[i, j]
@@ -494,17 +572,30 @@ def plot_section_heatmap(
                         fontsize=9, fontweight='bold')
     plt.tight_layout()
     _save(fig, out_path)
+    return ax
 
 
 def plot_s4_accuracy(
     df_eval: pd.DataFrame,
     row_col: str,
     title: str,
-    out_path: Path,
-) -> None:
-    """Bar chart of S4 (Good/Bad) decision accuracy per row_col value."""
-    row_vals = sorted(df_eval[row_col].dropna().unique(), key=str)
-    acc      = df_eval.groupby(row_col)['s4_correct'].mean().mul(100).reindex(row_vals)
+    out_path: 'Path | None' = None,
+    *,
+    run_id=None,
+    plot_name=None,
+    model=None,
+):
+    """
+    Bar chart of S4 (Good/Bad) decision accuracy per row_col value.
+
+    run_id, plot_name, model — filter controls (None = all, exact value, or a
+      list to restrict to), same convention as plot_section_heatmap.
+
+    Returns the Axes for further styling.
+    """
+    sub      = _apply_filters(df_eval, run_id=run_id, plot_name=plot_name, model=model)
+    row_vals = sorted(sub[row_col].dropna().unique(), key=str)
+    acc      = sub.groupby(row_col)['s4_correct'].mean().mul(100).reindex(row_vals)
     colors   = plt.cm.Set1(np.linspace(0, 1, len(row_vals)))
 
     fig, ax = plt.subplots(figsize=(max(5, 1.3 * len(row_vals)), 4))
@@ -521,32 +612,130 @@ def plot_s4_accuracy(
             ax.text(i, v + 1, f'{v:.0f}%', ha='center', fontsize=9)
     plt.tight_layout()
     _save(fig, out_path)
+    return ax
+
+
+def plot_histogram(
+    df: pd.DataFrame,
+    row_col: str,
+    value_col: str,
+    title: str,
+    out_path: 'Path | None' = None,
+    *,
+    run_id=None,
+    plot_name=None,
+    model=None,
+    agg: str = 'mean',
+    bins: int = 20,
+    overlay: bool = False,
+    cms_label: 'str | None' = 'Private Work',
+):
+    """
+    Histogram of value_col (1D output, e.g. latency) split by row_col value.
+    Rendered with mplhep in CMS style when mplhep is available.
+
+    Same dimensions and controls as plot_section_heatmap:
+      run_id, plot_name, model — filter controls (None = all, exact value,
+        or a list to restrict to).
+      run_number — never filtered; contributes its full distribution to the
+        histogram. `agg` ('mean' default, 'median', or 'std') is drawn as a
+        reference line/label per row_col value rather than collapsing the data.
+
+    overlay: False (default) draws one subplot per row_col value (filled bars).
+      True draws every row_col value as an outlined step histogram on a single
+      shared Axes — use this to compare several models/run_ids on one plot
+      instead of scrolling through subplots.
+
+    cms_label: text passed to mplhep.cms.label() on the top subplot
+      (e.g. 'Preliminary', 'Private Work'); set to None to skip it.
+
+    Returns the Axes (overlay, or a single row_col value) or the array of Axes
+    (one per row_col value) for further styling.
+    """
+    sub      = _apply_filters(df, run_id=run_id, plot_name=plot_name, model=model)
+    row_vals = sorted(sub[row_col].dropna().unique(), key=str)
+    colors   = plt.cm.Set1(np.linspace(0, 1, len(row_vals)))
+
+    all_vals  = sub[value_col].dropna()
+    bin_edges = np.histogram_bin_edges(all_vals, bins=bins) if len(all_vals) else bins
+
+    n_axes = 1 if overlay else len(row_vals)
+    style_ctx = plt.style.context(hep.style.CMS) if _HAS_MPLHEP else plt.style.context({})
+    with style_ctx:
+        fig, axes = plt.subplots(n_axes, 1, figsize=(8, 5 * n_axes), squeeze=False)
+        for i, val in enumerate(row_vals):
+            ax   = axes[0, 0] if overlay else axes[i, 0]
+            vals = sub.loc[sub[row_col] == val, value_col].dropna()
+
+            if len(vals):
+                reduced = vals.agg(agg)
+                label   = f'{row_col}={short_name(str(val))}  ({agg}={reduced:.2f}, n={len(vals)})'
+            else:
+                reduced, label = None, f'{row_col}={short_name(str(val))}'
+
+            color = mcolors.to_hex(colors[i])
+            if _HAS_MPLHEP:
+                counts, edges = np.histogram(vals, bins=bin_edges)
+                hep.histplot(counts, edges, ax=ax,
+                            histtype='step' if overlay else 'fill',
+                            color=color, edgecolor=color if overlay else 'black',
+                            linewidth=2 if overlay else 1,
+                            alpha=0.9 if overlay else 0.85, label=label)
+            else:
+                ax.hist(vals, bins=bin_edges, color=color,
+                        histtype='step' if overlay else 'bar',
+                        edgecolor=None if overlay else 'black',
+                        linewidth=2 if overlay else 1,
+                        alpha=0.9 if overlay else 0.85, label=label)
+
+            if reduced is not None:
+                ax.axvline(reduced, color=color if overlay else 'black',
+                          linestyle='--', linewidth=1.2)
+
+            if not overlay:
+                ax.set_xlabel(value_col)
+                ax.set_ylabel('count')
+                ax.legend(fontsize=9, loc='upper right')
+                if cms_label and _HAS_MPLHEP and i == 0:
+                    hep.cms.label(ax=ax, data=True, label=cms_label)
+
+        if overlay:
+            ax = axes[0, 0]
+            ax.set_xlabel(value_col)
+            ax.set_ylabel('count')
+            ax.legend(fontsize=9, loc='upper right')
+            if cms_label and _HAS_MPLHEP:
+                hep.cms.label(ax=ax, data=True, label=cms_label)
+
+        fig.suptitle(title, fontsize=14, fontweight='bold')
+        plt.tight_layout()
+        _save(fig, out_path)
+
+    if overlay or len(row_vals) <= 1:
+        return axes[0, 0]
+    return axes
 
 
 def plot_latency(
     df: pd.DataFrame,
     row_col: str,
     title: str,
-    out_path: Path,
-) -> None:
-    """Bar chart of mean generation latency per row_col value."""
-    row_vals = sorted(df[row_col].dropna().unique(), key=str)
-    lat      = df.groupby(row_col)['generation_latency_s'].mean().reindex(row_vals)
-    colors   = plt.cm.Set1(np.linspace(0, 1, len(row_vals)))
-
-    fig, ax = plt.subplots(figsize=(max(5, 1.3 * len(row_vals)), 4))
-    ax.bar(range(len(row_vals)), lat.values, color=colors)
-    ax.set_xticks(range(len(row_vals)))
-    ax.set_xticklabels([short_name(str(v)) for v in row_vals],
-                       rotation=20, ha='right', fontsize=9)
-    ax.set_title(title, fontsize=10)
-    ax.set_ylabel('Mean generation latency (s)')
-    max_lat = float(np.nanmax(lat.values.astype(float))) if lat.notna().any() else 1.0
-    for i, v in enumerate(lat.values):
-        if pd.notna(v):
-            ax.text(i, v + max_lat * 0.02, f'{v:.1f}s', ha='center', fontsize=9)
-    plt.tight_layout()
-    _save(fig, out_path)
+    out_path: 'Path | None' = None,
+    *,
+    run_id=None,
+    plot_name=None,
+    model=None,
+    agg: str = 'mean',
+    bins: int = 20,
+    overlay: bool = False,
+    cms_label: 'str | None' = 'Private Work',
+):
+    """Histogram of generation latency per row_col value. See plot_histogram."""
+    return plot_histogram(
+        df, row_col, 'generation_latency_s', title, out_path,
+        run_id=run_id, plot_name=plot_name, model=model, agg=agg, bins=bins,
+        overlay=overlay, cms_label=cms_label,
+    )
 
 
 def plot_comparison(
@@ -554,8 +743,13 @@ def plot_comparison(
     compare_col: str,
     row_col: str,
     title: str,
-    out_path: Path,
-) -> None:
+    out_path: 'Path | None' = None,
+    *,
+    run_id=None,
+    plot_name=None,
+    model=None,
+    agg: str = 'mean',
+):
     """
     Grouped bar chart comparing compare_col values across sections.
     One subplot per row_col value (e.g. one per model).
@@ -563,9 +757,19 @@ def plot_comparison(
 
     Example: compare_col='run_id', row_col='model'
       → for each model, shows localRAG vs YAML bars side-by-side per section.
+
+    run_id, plot_name, model — filter controls (None = all, exact value, or a
+      list to restrict to), same convention as plot_section_heatmap. Useful to
+      narrow down further when compare_col/row_col are a different pair of
+      dimensions (e.g. restrict plot_name while comparing run_id × model).
+    run_number — never filtered; always collapsed via `agg`
+      ('mean' default, 'median', or 'std').
+
+    Returns the array of Axes for further styling.
     """
-    row_vals     = sorted(df_eval[row_col].dropna().unique(), key=str)
-    compare_vals = sorted(df_eval[compare_col].dropna().unique(), key=str)
+    sub_all      = _apply_filters(df_eval, run_id=run_id, plot_name=plot_name, model=model)
+    row_vals     = sorted(sub_all[row_col].dropna().unique(), key=str)
+    compare_vals = sorted(sub_all[compare_col].dropna().unique(), key=str)
     colors       = plt.cm.Set2(np.linspace(0, 1, len(compare_vals)))
 
     x     = np.arange(len(SCORE_COLS))
@@ -578,12 +782,12 @@ def plot_comparison(
     )
     for ri, row_val in enumerate(row_vals):
         ax  = axes[ri, 0]
-        sub = df_eval[df_eval[row_col] == row_val]
+        sub = sub_all[sub_all[row_col] == row_val]
 
         for ci, cval in enumerate(compare_vals):
             scores = (
                 sub[sub[compare_col] == cval][SCORE_COLS]
-                .mean().values.astype(float)
+                .agg(agg).values.astype(float)
             )
             bars = ax.bar(x + ci * width, scores, width,
                           label=str(cval), color=colors[ci])
@@ -596,10 +800,12 @@ def plot_comparison(
         ax.set_title(f'{row_col} = {short_name(str(row_val))}', fontsize=9)
         ax.set_xticks(x + width * (len(compare_vals) - 1) / 2)
         ax.set_xticklabels(SECTION_LABELS, rotation=15, ha='right', fontsize=9)
-        ax.set_ylim(1, 5.8)
-        ax.set_ylabel('Mean score (1–5)')
+        if agg != 'std':
+            ax.set_ylim(1, 5.8)
+        ax.set_ylabel(f'{agg} score (1–5)')
         ax.legend(title=compare_col, fontsize=8, loc='lower right')
 
     fig.suptitle(title, fontsize=11, fontweight='bold')
     plt.tight_layout()
     _save(fig, out_path)
+    return axes if len(row_vals) > 1 else axes[0, 0]
