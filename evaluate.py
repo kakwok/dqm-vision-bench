@@ -580,6 +580,45 @@ def _print_section_table(rows: 'list[dict]', columns: 'list[tuple[str, int]]') -
         print(rule)
 
 
+def check_df_eval_consistency(df: pd.DataFrame, df_eval: pd.DataFrame) -> None:
+    """
+    Warn about mismatches between raw responses (df) and judge scores (df_eval),
+    which browse_responses left-joins on 'file'. df_eval is built from df by
+    run_evaluations, so its files should always be a subset of df's:
+      - 'missing' (df files absent from df_eval) is expected whenever some
+        responses haven't been judged yet — those rows show blank scores in
+        browse_responses instead of erroring, so it's worth surfacing.
+      - 'extra' (df_eval files absent from df) should never happen — it means
+        df_eval is stale, e.g. loaded from a different RUN_IDS/MODELS
+        selection than the currently loaded df.
+    """
+    df_files      = set(df['file'])
+    df_eval_files = set(df_eval['file'])
+    missing       = df_files - df_eval_files
+    extra         = df_eval_files - df_files
+
+    if missing:
+        print(f'WARNING: {len(missing)}/{len(df_files)} responses in df have no df_eval match '
+              f'(scores/comments will be blank for these in browse_responses):')
+        display(
+            df[df['file'].isin(missing)]
+            .groupby(['run_id', 'model_short'])['image_name'].count()
+            .rename('n_missing_from_df_eval')
+        )
+    else:
+        print(f'OK: all {len(df_files)} responses in df have a matching df_eval row')
+
+    if extra:
+        print(f'ALERT: {len(extra)} df_eval rows have no matching file in df — df_eval should '
+              f'always be derived from df, so this means df_eval is stale (e.g. loaded from a '
+              f'different RUN_IDS/MODELS selection than the currently loaded df):')
+        display(
+            df_eval[df_eval['file'].isin(extra)]
+            .groupby(['run_id', 'model_short'])['file'].count()
+            .rename('n_extra_in_df_eval')
+        )
+
+
 def browse_responses(
     df: pd.DataFrame,
     df_eval: 'pd.DataFrame | None' = None,
@@ -615,6 +654,7 @@ def browse_responses(
     printing is a side effect.
     """
     if df_eval is not None:
+        check_df_eval_consistency(df, df_eval)
         eval_cols = ['file', 'judge_model'] + SCORE_COLS + [f'{c}_comment' for c in SCORE_COLS]
         merged = df.merge(df_eval[eval_cols], on='file', how='left')
     else:

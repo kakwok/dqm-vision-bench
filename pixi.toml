@@ -12,6 +12,9 @@ requests = "*"
 python-dotenv = "*"
 sentence-transformers = "*"
 pyyaml = "*"
+matplotlib = "*"
+nbconvert = "*"
+nbclient = "*"
 
 [pypi-dependencies]
 rank-bm25 = "*"

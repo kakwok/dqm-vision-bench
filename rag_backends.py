@@ -28,12 +28,21 @@ import pandas as pd
 
 @dataclass
 class LocalRAG:
-    """Retrieve context from a pre-chunked CSV using BM25 + vector search."""
+    """Retrieve context from a pre-chunked CSV using BM25 + vector search.
+
+    The query text sent for image-driven lookups is a structured sentence built
+    from plot_instructions metadata — "Find information about plot {title}
+    numbered {plot_number} in subsystem {subsystem}" — rather than the raw
+    image folder name, which retrieval-quality testing showed nearly doubles
+    recall@5 (see rag_retrieval_investigation.ipynb, Round 3). Falls back to
+    the raw stem when no matching plot_instructions entry exists.
+    """
     csv_path: str | Path
     top_k: int = 5
     method: str = "hybrid"   # "hybrid" | "top_k" | "threshold"
-    alpha: float = 0.5
+    alpha: float = 0.8
     score_threshold: float = 0.35
+    store_dir: str | Path = "plot_instructions"  # metadata source for the structured query
 
 
 @dataclass
@@ -234,6 +243,19 @@ def retrieve_and_inspect(
 _yaml_cache: dict[str, dict] = {}
 
 
+def _load_yaml_doc(store_dir: str | Path, subsystem: str) -> "dict | None":
+    """Load (and cache) plot_instructions/<subsystem>.yaml. None if it doesn't exist."""
+    yaml_path = Path(store_dir) / f"{subsystem}.yaml"
+    if not yaml_path.exists():
+        return None
+    cache_key = str(yaml_path.resolve())
+    if cache_key not in _yaml_cache:
+        import yaml
+        with open(yaml_path, encoding="utf-8") as f:
+            _yaml_cache[cache_key] = yaml.safe_load(f)
+    return _yaml_cache[cache_key]
+
+
 def lookup_instruction(stem: str, store_dir: str | Path = "plot_instructions") -> str:
     """
     Return the instruction text for a plot stem from plot_instructions/<subsystem>.yaml.
@@ -241,18 +263,8 @@ def lookup_instruction(stem: str, store_dir: str | Path = "plot_instructions") -
     Renders: description + quality_criteria + any non-expired known_issues.
     Returns empty string if the YAML file or the stem entry does not exist.
     """
-    subsystem = stem.split("_")[0]
-    yaml_path = Path(store_dir) / f"{subsystem}.yaml"
-    if not yaml_path.exists():
-        return ""
-
-    cache_key = str(yaml_path.resolve())
-    if cache_key not in _yaml_cache:
-        import yaml
-        with open(yaml_path, encoding="utf-8") as f:
-            _yaml_cache[cache_key] = yaml.safe_load(f)
-
-    entry = _yaml_cache.get(cache_key, {}).get("plots", {}).get(stem)
+    doc = _load_yaml_doc(store_dir, stem.split("_")[0])
+    entry = (doc or {}).get("plots", {}).get(stem)
     if not entry:
         return ""
 
@@ -269,6 +281,25 @@ def lookup_instruction(stem: str, store_dir: str | Path = "plot_instructions") -
         parts.append(f"Known issue: {issue['text']}")
 
     return "\n\n".join(parts)
+
+
+def _build_structured_query(stem: str, store_dir: str | Path = "plot_instructions") -> "str | None":
+    """
+    Build a structured retrieval query from plot_instructions metadata:
+    "Find information about plot {title} numbered {plot_number} in subsystem {subsystem}".
+
+    Returns None if no plot_instructions entry exists for *stem* (e.g. a subsystem
+    without curated instructions yet) — callers should fall back to the raw stem.
+    """
+    subsystem_guess = stem.split("_")[0]
+    doc = _load_yaml_doc(store_dir, subsystem_guess)
+    entry = (doc or {}).get("plots", {}).get(stem)
+    if not entry or not entry.get("title"):
+        return None
+    title = entry["title"]
+    plot_number = entry.get("plot_number", "")
+    subsystem = doc.get("subsystem", subsystem_guess)
+    return f"Find information about plot {title} numbered {plot_number} in subsystem {subsystem}"
 
 
 # ---------------------------------------------------------------------------
@@ -289,7 +320,10 @@ def retrieve_context(
     if isinstance(context, NoContext):
         return ""
     elif isinstance(context, LocalRAG):
-        query_text = image_path.parent.name if image_path else prompt
+        query_text = prompt
+        if image_path:
+            stem = image_path.parent.name
+            query_text = _build_structured_query(stem, context.store_dir) or stem
         return retrieve_chunks(
             query_text,
             csv_path=context.csv_path,
