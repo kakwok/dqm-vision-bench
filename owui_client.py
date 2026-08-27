@@ -5,9 +5,21 @@ Core query functions for the FNAL OpenWebUI instance.
 Import this from a notebook or script; do not run directly.
 
 Requires in environment (or .env):
-    OWUI_API_KEY   - Bearer token from OpenWebUI Settings > Account
-    OWUI_URL       - Base URL of the OpenWebUI instance
-    OWUI_MODEL     - (optional) default model ID
+    OWUI_API_KEY     - Bearer token from OpenWebUI Settings > Account
+    OWUI_URL         - Base URL of the OpenWebUI instance
+    OWUI_MODEL       - (optional) default model ID
+    LITELLM_API_KEY  - API key for the LiteLLM proxy (provider "litellm")
+    LITELLM_URL      - Base URL of the LiteLLM proxy
+    NRP_API_KEY      - API key for the NRP endpoint (provider "nrp")
+    NRP_URL          - Base URL of the NRP endpoint
+    DEFAULT_PROVIDER - (optional) which of PROVIDERS to use when a
+                       ModelConfig doesn't set .provider. Defaults to "litellm".
+
+Switching providers:
+    Pass provider="nrp" (or "litellm"/"owui") to ModelConfig — it's saved into
+    config_<run_id>.json like any other field, so a run's provider choice is
+    reproducible. See PROVIDERS below for the full registry, or override the
+    default for an entire batch with the DEFAULT_PROVIDER env var.
 
 Expected image layout:
     images/
@@ -59,24 +71,77 @@ OWUI_API_KEY  = os.environ.get("OWUI_API_KEY", "")
 OWUI_URL = os.environ.get("OWUI_URL", "https://openwebui.fnal.gov/").rstrip("/")
 LITELLM_API_KEY = os.environ.get("LITELLM_API_KEY", "")
 LITELLM_URL     = os.environ.get("LITELLM_URL", "").rstrip("/")
+NRP_API_KEY = os.environ.get("NRP_API_KEY", "")
+NRP_URL     = os.environ.get("NRP_URL", "").rstrip("/")
 MODEL    = os.environ.get("OWUI_MODEL", "")
 TIMEOUT  = int(os.environ.get("OWUI_TIMEOUT", "400"))
 
 if not OWUI_API_KEY:
     raise EnvironmentError("OWUI_API_KEY not set -  needed for knowledge/RAG access.")
-if not LITELLM_API_KEY:
-    raise EnvironmentError("LITELLM_API_KEY not set - needed for model inference.")
 
-# Knowledge/RAG calls: authenticated with OWUI key
+# Knowledge/RAG calls: always go through OpenWebUI, authenticated with OWUI key
 _OWUI_HEADERS = {
     "Authorization": f"Bearer {OWUI_API_KEY}",
     "Content-Type": "application/json",
 }
-# Model inference + listing: authenticated with LiteLLM key
-_LITELLM_HEADERS = {
-    "Authorization": f"Bearer {LITELLM_API_KEY}",
-    "Content-Type": "application/json",
+
+
+# ---------------------------------------------------------------------------
+# Model inference providers
+# ---------------------------------------------------------------------------
+# A "provider" is one OpenAI-compatible backend (base URL + key + endpoint
+# paths). ModelConfig.provider picks which one a given model is queried
+# through — see get_provider() / send_query(). Add a new provider by adding
+# an entry here (and its *_API_KEY/*_URL in .env); nothing else needs to
+# change to start using it.
+
+@dataclass
+class Provider:
+    """One inference backend: base URL + API key + endpoint paths."""
+    base_url: str
+    api_key: str
+    chat_endpoint: str = "/v1/chat/completions"
+    models_endpoint: str = "/v1/models"
+
+    def headers(self) -> dict:
+        return {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
+
+    def chat_url(self) -> str:
+        return f"{self.base_url}{self.chat_endpoint}"
+
+    def models_url(self) -> str:
+        return f"{self.base_url}{self.models_endpoint}"
+
+
+PROVIDERS: dict[str, Provider] = {
+    "litellm": Provider(base_url=LITELLM_URL, api_key=LITELLM_API_KEY),
+    "owui":    Provider(base_url=OWUI_URL, api_key=OWUI_API_KEY, chat_endpoint="/api/chat/completions"),
+    # NRP_URL already includes the /v1 prefix (OpenAI-SDK convention), unlike
+    # LITELLM_URL/OWUI_URL above — so its endpoint paths omit it.
+    "nrp":     Provider(base_url=NRP_URL, api_key=NRP_API_KEY,
+                         chat_endpoint="/chat/completions", models_endpoint="/models"),
 }
+
+DEFAULT_PROVIDER = os.environ.get("DEFAULT_PROVIDER", "litellm")
+
+
+def get_provider(name: "str | None" = None) -> Provider:
+    """
+    Look up a Provider by name (falls back to DEFAULT_PROVIDER), and check
+    it's actually configured (base_url + api_key both set) before returning it.
+    """
+    name = name or DEFAULT_PROVIDER
+    if name not in PROVIDERS:
+        raise ValueError(f"Unknown provider '{name}'. Available: {sorted(PROVIDERS)}")
+    provider = PROVIDERS[name]
+    if not provider.base_url or not provider.api_key:
+        raise EnvironmentError(
+            f"Provider '{name}' is not configured — set {name.upper()}_URL and "
+            f"{name.upper()}_API_KEY in .env."
+        )
+    return provider
+
+
 # ---------------------------------------------------------------------------
 # Image helpers
 # ---------------------------------------------------------------------------
@@ -114,16 +179,18 @@ def _image_content_block(image_path: str | Path) -> dict:
 # ---------------------------------------------------------------------------
 # Model / knowledge helpers
 # ---------------------------------------------------------------------------
-def list_models(detail: bool = False) -> list:
+def list_models(provider: "str | None" = None, detail: bool = False) -> list:
     """
-    Return available models — authenticated via LiteLLM key.
+    Return available models from *provider* (default: DEFAULT_PROVIDER).
 
     Parameters
     ----------
-    detail : False (default) → list of model ID strings
-             True            → list of full model dicts from the API
+    provider : Name from PROVIDERS, e.g. "litellm", "owui", "nrp".
+    detail   : False (default) → list of model ID strings
+               True            → list of full model dicts from the API
     """
-    r = requests.get(f"{LITELLM_URL}/v1/models", headers=_LITELLM_HEADERS, timeout=30)
+    p = get_provider(provider)
+    r = requests.get(p.models_url(), headers=p.headers(), timeout=30)
     r.raise_for_status()
     models = r.json()["data"]
     return models if detail else [m["id"] for m in models]
@@ -131,15 +198,17 @@ def list_models(detail: bool = False) -> list:
 
 def validate_models(models: "list[str | ModelConfig]") -> bool:
     """
-    Check that every model in *models* is available on the LiteLLM server.
+    Check that every model in *models* is available on its provider
+    (ModelConfig.provider, or DEFAULT_PROVIDER for plain name strings).
     Prints a summary and returns True if all are valid, False otherwise.
     OWUIContext models are not checked (server-side resolution).
     """
-    available = set(list_models())
+    available_by_provider: dict[str, set] = {}
     ok = True
     for m in models:
         if isinstance(m, ModelConfig):
             name = m.name
+            provider_name = m.provider or DEFAULT_PROVIDER
             extras = [
                 f"{f.name}={getattr(m, f.name)}"
                 for f in fields(m)
@@ -148,11 +217,22 @@ def validate_models(models: "list[str | ModelConfig]") -> bool:
             detail = f"  ({', '.join(extras)})" if extras else ""
         else:
             name = m
+            provider_name = DEFAULT_PROVIDER
             detail = ""
+
+        if provider_name not in available_by_provider:
+            try:
+                available_by_provider[provider_name] = set(list_models(provider_name))
+            except Exception as e:
+                print(f"  !! Could not list models for provider '{provider_name}': {e}")
+                available_by_provider[provider_name] = set()
+                ok = False
+
+        available = available_by_provider[provider_name]
         status = "OK" if name in available else "!! UNKNOWN"
         if name not in available:
             ok = False
-        print(f"  {status}  {name}{detail}")
+        print(f"  {status}  {name}  [{provider_name}]{detail}")
     return ok
 
 
@@ -217,6 +297,7 @@ class ModelConfig:
     """Model selection and inference settings."""
     name: str = ""
     image_token_budget: int | None = None  # Gemma 4 only; valid values: 70,140,280,560,1120
+    provider: str | None = None  # key into PROVIDERS, e.g. "litellm"/"owui"/"nrp"; None -> DEFAULT_PROVIDER
 
 
 @dataclass
@@ -514,10 +595,10 @@ def send_query(spec: dict, *, model: "ModelConfig | None" = None) -> dict:
     if isinstance(context, OWUIContext) and context.collection_ids:
         payload["files"] = [{"type": "collection", "id": cid} for cid in context.collection_ids]
 
-    if isinstance(context, OWUIContext):
-        url, headers = f"{OWUI_URL}/api/chat/completions", _OWUI_HEADERS
-    else:
-        url, headers = f"{LITELLM_URL}/v1/chat/completions", _LITELLM_HEADERS
+    # OWUIContext needs server-side collection resolution, which only the
+    # OpenWebUI endpoint provides — the model's own .provider is ignored here.
+    provider = get_provider("owui") if isinstance(context, OWUIContext) else get_provider(model.provider)
+    url, headers = provider.chat_url(), provider.headers()
 
     t0 = time.time()
     t_first_token = None
@@ -1054,6 +1135,13 @@ def retry_failed(
     delay = config.delay if delay is None else delay
     ref_dir = Path(config.ref_dir) if config.ref_dir else None
 
+    # Look up each model's full ModelConfig (provider, image_token_budget, ...)
+    # from the run config, rather than rebuilding a bare one from just its name.
+    model_cfg_by_name = {
+        (m.name if isinstance(m, ModelConfig) else m): (m if isinstance(m, ModelConfig) else ModelConfig(name=m))
+        for m in config.models
+    }
+
     if verbose:
         print(f'Retrying {len(failed)} failed quer{"y" if len(failed) == 1 else "ies"}...')
 
@@ -1066,7 +1154,7 @@ def retry_failed(
 
         refs = find_reference_images(image_path, ref_dir) if ref_dir is not None else []
         resolved_prompt = resolve_prompt(config.prompt, image_path, config.run_metadata)
-        model_cfg = ModelConfig(name=model_name)
+        model_cfg = model_cfg_by_name.get(model_name, ModelConfig(name=model_name))
         resolved_images = resolve_image_inputs(
             config.image_mode, image_path=image_path, reference_images=refs, eval_model=model_cfg
         )
