@@ -187,6 +187,8 @@ Use `--plot` to select individual plot numbers within a subsystem. Omit `--plot`
 | `dqm_plot.py` | Core logic: ROOT rendering, file resolution, path expansion |
 | `shift_layout_helpers.py` | Helpers to browse `shift_layouts.json` and generate `PLOT_CONFIG` |
 | `shift_layouts.json` | Structured index of all shift-workspace plots (paths + descriptions) |
+| `dqm_gui_client.py` | DQM GUI HTTP client (X.509 auth, PNG fetch) — see "Fetching from the DQM GUI" |
+| `fetch_gui_cli.py` | CLI driver for fetching plots from the DQM GUI |
 
 ### `PLOT_CONFIG` format
 
@@ -197,6 +199,111 @@ DQMData/Run {run}/{Subsystem}/Run summary/{...path...}/{plotName}
 ```
 
 The `{run}` value is auto-detected from the filename (`R000XXXXXX`) or overridden via `RUN_OVERRIDE`.
+
+## Fetching from the DQM GUI
+
+`dqm_plot.py` needs a ROOT file staged on disk or XRootD. `fetch_gui_cli.py` is the
+network alternative: it asks the CMS DQM GUI to render a monitor element and saves the
+PNG a shifter would see, into the **same `images/<folder>/<stem>_run<XXXXXX>.png` layout**
+`produce_images()` uses. Everything downstream (`run_batch_cli.py`, `evaluate_cli.py`,
+reference-image lookup) is unaffected by which source produced the images.
+
+It does not import ROOT, so it runs in the plain pixi environment without CMSSW.
+
+### Authentication — X.509, not SSO
+
+`cmsweb.cern.ch/dqm/*` is gated by an **X.509 client certificate**, not by CERN SSO: it
+answers unauthenticated requests with a bare `401`, with no `WWW-Authenticate` header and
+no redirect to `auth.cern.ch` even for a browser. So an SSO token — including one from
+`tsgauth` — will not open it; a CMS grid proxy will.
+
+```bash
+voms-proxy-init -voms cms -valid 24:00
+voms-proxy-info -all | grep -E 'subject|timeleft|VO'   # VO must be cms
+```
+
+Optional `.env` keys (all are *paths*, not secrets — the proxy file is the credential):
+
+```bash
+DQM_WORKSPACE=offline                            # offline | online
+X509_USER_PROXY=/tmp/x509up_u1000                # default: /tmp/x509up_u<uid>
+DQM_CA_BUNDLE=/etc/grid-security/certificates    # CERN Grid CA
+```
+
+`DQM_CA_BUNDLE` matters: cmsweb is signed by the CERN Grid CA, which is **not** in the
+default `certifi` trust store, so verification fails with `unable to get local issuer
+certificate` unless you point at the grid CA directory.
+
+The client never creates, renews or destroys a proxy. It reads the one you have, warns
+when under two hours remain, and turns cmsweb's bare `401` into a message saying whether
+the proxy expired mid-run or was rejected outright.
+
+### Usage
+
+```bash
+# Preview the URLs — no proxy needed, no network call made
+python3 fetch_gui_cli.py --runs 398185 --subsystem L1T --plot 00 --dry-run \
+    --dataset '/ZeroBias/Run2024C-PromptReco-v1/DQMIO'
+
+# Check proxy status
+python3 fetch_gui_cli.py --check-proxy
+
+# Fetch
+python3 fetch_gui_cli.py --runs 398185 398186 --subsystem L1T \
+    --dataset '/ZeroBias/Run2024C-PromptReco-v1/DQMIO' --outdir images
+
+# Online workspace takes no dataset
+python3 fetch_gui_cli.py --runs 398185 --subsystem L1T --workspace online
+```
+
+Start with `--dry-run`. It needs no credential and prints exactly what would be requested,
+which is the cheapest way to catch a wrong dataset or plot selection.
+
+| Flag | Description |
+|---|---|
+| `--runs` | One or more run numbers |
+| `--subsystem` / `--plot` | Plot selection, same semantics as `dqm_plot.py` |
+| `--dataset` | Required for `offline`; implicit for `online` |
+| `--workspace` | `offline` (default) or `online` |
+| `--overwrite` | Re-fetch even if the PNG exists (default: skip) |
+| `--no-cache` | Bypass the `.dqm_cache/` response cache |
+| `--dry-run` | Print URLs and exit; no proxy, no network |
+| `--check-proxy` | Report proxy status and exit |
+
+### Workspace path mapping
+
+The two workspaces address monitor elements differently, handled by
+`shift_layout_helpers.gui_path()`:
+
+```
+shift_layouts.json   L1T/L1TStage2CaloLayer1/ecalOccRecdEtWgt
+online               L1T/L1TStage2CaloLayer1/ecalOccRecdEtWgt
+offline              L1T/Run summary/L1TStage2CaloLayer1/ecalOccRecdEtWgt
+ROOT file            DQMData/Run {run}/L1T/Run summary/L1TStage2CaloLayer1/ecalOccRecdEtWgt
+```
+
+### Caveats
+
+- **The `online` plotfairy URL is confirmed** against live cmsweb (2026-09-15): a direct
+  fetch of run 398185's `L1T/L1TStage2CaloLayer1/ecalOccRecdEtWgt` returned the same PNG
+  shown in the browser. **`offline` is not yet independently confirmed** — it follows the
+  same documented convention and online's success makes it likely correct, but if a fetch
+  404s there, the templates are at the top of `dqm_gui_client.py` in one block — that is
+  the only place to edit.
+- **`list_samples()` does not work for the `online` workspace — confirmed, not just
+  suspected.** `data/json/samples?match=<run>` returned `{"samples": []}` for a run
+  actively being written to online DQM. The online GUI browses runs through a stateful
+  session (open → `select` → `setFocus`), which this client does not implement, since the
+  online dataset is fixed (`/Global/Online/ALL`) and needs no lookup. Calling
+  `list_samples()` on the online workspace raises `DQMGUIError` rather than returning a
+  misleading empty result.
+- **A missing monitor element may return a valid PNG**, not an error: the GUI renders a
+  "not found" placeholder. `looks_like_placeholder()` flags suspiciously small images in
+  the results, but it is a size heuristic and wants calibrating against a known-missing ME
+  now that a real plot's size is known to be well above the current 6000-byte threshold.
+- **Proxies expire (~24 h).** A long campaign needs a renewal; the client reports this
+  rather than failing opaquely.
+- Responses are cached under `.dqm_cache/` keyed by URL. Delete it to force refetching.
 
 ## Batch Querying
 

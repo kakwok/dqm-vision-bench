@@ -116,6 +116,35 @@ def _to_root_path(json_path: str) -> str:
     return "DQMData/Run {run}/" + parts[0] + "/Run summary/" + "/".join(parts[1:])
 
 
+def gui_path(json_path: str, workspace: str = "offline") -> str:
+    """
+    Convert a shift_layouts.json path to a DQM GUI monitor-element path.
+
+    The GUI addresses a monitor element by the path *inside* the run, without
+    the ``DQMData/Run {run}`` prefix that the ROOT file uses (see
+    _to_root_path). The two workspaces differ by one infix:
+
+        json      L1T/L1TStage2CaloLayer1/ecalOccRecdEtWgt
+        online    L1T/L1TStage2CaloLayer1/ecalOccRecdEtWgt
+        offline   L1T/Run summary/L1TStage2CaloLayer1/ecalOccRecdEtWgt
+
+    Offline DQM nests everything under "Run summary"; online does not.
+
+    Raises ValueError on an unknown workspace rather than silently guessing,
+    because a wrong path yields a plausible-looking "not found" placeholder
+    image rather than an error.
+    """
+    if workspace not in ("offline", "online"):
+        raise ValueError(
+            f"Unknown workspace {workspace!r}; expected 'offline' or 'online'."
+        )
+
+    parts = json_path.split("/")
+    if workspace == "online" or len(parts) < 2:
+        return json_path
+    return f"{parts[0]}/Run summary/" + "/".join(parts[1:])
+
+
 def list_subsystems() -> list[str]:
     """Return all subsystem names found in shift_layouts.json."""
     return [entry["subsystem"] for entry in _load()]

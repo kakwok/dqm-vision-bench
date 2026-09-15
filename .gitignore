@@ -5,3 +5,4 @@ __pycache__/
 *.ipynb_checkpoints
 graphrag_cache/
 graphrag_out/
+.dqm_cache/
