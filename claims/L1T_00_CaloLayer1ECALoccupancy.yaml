@@ -1,0 +1,70 @@
+claims:
+  - id: s1_cites_collision_rule
+    section: s1_instruction_quote
+    applies_to: collision
+    text: >-
+      Cites the collision quality criterion: the plot should be completely
+      filled without big white areas, any white area larger than two
+      neighboring pixels must be reported.
+    truth: true
+
+  - id: s1_cites_cosmic_rule
+    section: s1_instruction_quote
+    applies_to: noncollision
+    text: >-
+      Cites the non-collision/cosmic criterion: large white areas may appear
+      because sections aren't in the run; occupancy is dominated by noise and
+      more variance is normal and not a concern.
+    truth: true
+
+  - id: s2_center_ieta0_empty
+    section: s2_plot_description
+    applies_to: any
+    text: >-
+      The central iEta=0 column is unfilled/white — expected by detector
+      design (no iEta=0 entries exist), not a defect.
+    truth: true
+
+  - id: s2_barrel_endcap_transition
+    section: s2_plot_description
+    applies_to: any
+    required: false
+    text: >-
+      Occupancy is lower near |iEta|≈17 (barrel/endcap transition region)
+      and higher beyond |iEta|≈25, consistent with ECAL boundary geometry.
+    truth: true
+
+  - id: s2_collision_near_complete_fill
+    section: s2_plot_description
+    applies_to: collision
+    text: >-
+      Plot is described as (near-)completely filled, with any white areas
+      no larger than ~2 neighboring pixels.
+    truth: true
+
+  - id: s2_noncollision_low_occupancy
+    section: s2_plot_description
+    applies_to: noncollision
+    text: >-
+      Plot is described as mostly low occupancy/blue with a small number of
+      scattered hot channels/towers, consistent with non-collision running.
+    truth: true
+
+  - id: s3_white_area_within_tolerance
+    section: s3_comparison
+    applies_to: collision
+    text: >-
+      Concludes that any white area present is within the ≤2-pixel
+      collision-criterion tolerance.
+    truth: true
+
+  - id: s3_noise_variance_explains_hot_channels
+    section: s3_comparison
+    applies_to: noncollision
+    text: >-
+      Attributes hot channels / variance to noise being dominant in
+      non-collision running, per the cosmic criterion, rather than treating
+      them as a defect.
+    truth: true
+
+overrides: {}

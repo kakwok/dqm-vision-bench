@@ -15,7 +15,9 @@ pyyaml = "*"
 matplotlib = "*"
 nbconvert = "*"
 nbclient = "*"
+networkx = "*"
 
 [pypi-dependencies]
 rank-bm25 = "*"
 langchain-huggingface = "*"
+pyvis = "*"

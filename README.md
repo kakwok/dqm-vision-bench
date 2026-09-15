@@ -198,6 +198,87 @@ DQMData/Run {run}/{Subsystem}/Run summary/{...path...}/{plotName}
 
 The `{run}` value is auto-detected from the filename (`R000XXXXXX`) or overridden via `RUN_OVERRIDE`.
 
+## Batch Querying
+
+`run_batch_cli.py` drives `owui_client.run_batch()` — it sends every image under
+`images/<plotName>/` to each configured model and writes one `.txt` response per
+`(model, image)` pair under `results/<run_id>/<plotName>/`.
+
+```bash
+# Run a named preset (see PRESETS in run_batch_cli.py)
+python3 run_batch_cli.py --preset yaml
+
+# Sanity-check without querying (model validity, reference coverage, output paths)
+python3 run_batch_cli.py --preset yaml --dry-run
+
+# Re-query even if output files already exist
+python3 run_batch_cli.py --preset yaml --overwrite
+
+# Load a BatchConfig from JSON instead of a preset (e.g. a scoped/variant config)
+python3 run_batch_cli.py --config test_configs/YAML_direct.json
+```
+
+| Flag | Description |
+|---|---|
+| `--preset NAME` | Named `BatchConfig` from `PRESETS` in `run_batch_cli.py` |
+| `--config PATH` | Load a `BatchConfig` from a JSON file (overrides `--preset`) |
+| `--image-mode {direct,ref_captioned,both_captioned}` | How reference/input images are sent — as-is, or captioned to text first |
+| `--caption-model NAME` | Model used for captioning instead of self-caption (only with a captioned `--image-mode`) |
+| `--provider {litellm,owui,nrp}` | Inference provider to query all models through |
+| `--overwrite` | Re-query `(model, image)` pairs even if an output `.txt` already exists |
+| `--retry` | Retry any failed queries after the batch completes |
+| `--all-plots` | Clear `plot_filter` (run every plot under `image_root`) |
+| `--dry-run` | Print the sanity-check summary and exit without querying |
+
+**Scoping a run to specific plots or image modes:** there's no `--plot` flag —
+`plot_filter` is set in the preset or a `--config` JSON file. `test_configs/` holds an
+example: three configs cloned from the `"yaml"` preset, one per `image_mode`, each with
+`plot_filter` restricted to a single plot and a distinct `run_id` (`YAML_direct`,
+`YAML_ref_captioned`, `YAML_both_captioned` — outputs must use different `run_id`s per
+image_mode, since output filenames don't otherwise distinguish them). Rerun all three
+with `bash test_configs/run.sh` (forwards flags like `--overwrite`/`--dry-run`).
+
+## Evaluation
+
+`evaluate_cli.py` drives `evaluate.run_evaluations()` — the LLM-judge scoring step. It
+loads `.txt` responses from one or more `run_id`s under `results/`, matches each to its
+ground-truth file under `truth/`, scores it against a rubric with a judge model, and
+appends the scores to a cached CSV (`eval_output/eval_scores.csv` by default) so
+interrupted or repeated runs resume without re-judging. This is the headless/CLI
+equivalent of the judge pipeline in `evaluate.ipynb`; the notebook is still the place
+for exploratory reporting and plots (`report_scores`, `plot_section_heatmap`,
+`browse_responses`, etc. — all importable from `evaluate.py`).
+
+```bash
+# Run a named preset (see PRESETS in evaluate_cli.py)
+python3 evaluate_cli.py --preset yaml_image_modes
+
+# Or pass run_ids directly
+python3 evaluate_cli.py --run-ids YAML_direct YAML_ref_captioned YAML_both_captioned
+
+# Sanity-check only — truth coverage, latency, error count — no judge calls
+python3 evaluate_cli.py --preset yaml_image_modes --dry-run
+
+# Restrict to specific evaluated models
+python3 evaluate_cli.py --preset yaml_image_modes --models google/gemma4-31b qwen/qwen3.6
+```
+
+| Flag | Description |
+|---|---|
+| `--preset NAME` | Named `run_id` group from `PRESETS` in `evaluate_cli.py` |
+| `--run-ids ID [ID ...]` | `run_id`(s) under `--output-root` to evaluate (overrides `--preset`) |
+| `--models NAME [NAME ...]` | Restrict to these evaluated model names (default: all found) |
+| `--judge-model NAME` | Judge model to score responses with (default: `openai/gpt-oss-120b`) |
+| `--delay SECONDS` | Delay between judge calls (default: `1.0`) |
+| `--output-root PATH` | Root of `<run_id>/` result dirs (default: `results`) |
+| `--truth-root PATH` | Root of ground-truth `.txt` files (default: `truth`) |
+| `--eval-csv PATH` | Cached score CSV to append to/resume from (default: `eval_output/eval_scores.csv`) |
+| `--group-by COL [COL ...]` | Columns to group the final score report by (default: `run_id model_short`) |
+| `--dry-run` | Load results and print coverage/latency/error summary; exit without judging |
+
+Since the score CSV is a shared, append-only cache keyed on `(file, judge_model)`,
+re-running the same `run_id`s is cheap — already-scored responses are skipped.
+
 ## RAG Details
 
 Retrieval-Augmented Generation (RAG) injects relevant shift instructions into each query so the model has the specific rules for the plot it is evaluating. The knowledge base is sourced from [archi](https://github.com/archi-physics/archi) and exported as `document_chunks.csv` and `documents.csv`.

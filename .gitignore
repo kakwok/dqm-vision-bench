@@ -3,3 +3,5 @@ results/
 images/
 __pycache__/
 *.ipynb_checkpoints
+graphrag_cache/
+graphrag_out/

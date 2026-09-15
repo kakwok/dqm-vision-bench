@@ -14,6 +14,8 @@ Examples
   python3 evaluate_cli.py --run-ids YAML_direct YAML_ref_captioned YAML_both_captioned
   python3 evaluate_cli.py --preset yaml_image_modes --dry-run
   python3 evaluate_cli.py --preset yaml_image_modes --models google/gemma4-31b qwen/qwen3.6
+  python3 evaluate_cli.py --run-ids YAML --plots L1T_00_CaloLayer1ECALoccupancy \
+      --models asksage-overflow/claude-opus-5 asksage-overflow/claude-sonnet-4-6
 """
 import argparse
 import sys
@@ -46,6 +48,8 @@ def main() -> None:
                          help="One or more run_id(s) under --output-root. Overrides --preset.")
     parser.add_argument("--models", nargs="+", default=None,
                          help="Restrict to these evaluated model names. Default: all models found.")
+    parser.add_argument("--plots", nargs="+", default=None,
+                         help="Restrict to these plot_name(s). Default: all plots in the run_id.")
     parser.add_argument("--judge-model", default=DEFAULT_JUDGE_MODEL,
                          help=f"Judge model to score responses with. Default: {DEFAULT_JUDGE_MODEL}")
     parser.add_argument("--delay", type=float, default=1.0,
@@ -57,11 +61,16 @@ def main() -> None:
     parser.add_argument("--eval-csv", type=Path, default=None,
                          help="Cached judge-score CSV to append to/resume from. "
                               "Default: eval_output/eval_scores.csv")
+    parser.add_argument("--claim-csv", type=Path, default=None,
+                         help="Per-claim verdict CSV to append to (claims-mode only). "
+                              "Default: eval_output/claim_scores.csv")
     parser.add_argument("--group-by", nargs="+", default=["run_id", "model_short"],
                          help="Columns to group the final score reports by. Default: run_id model_short")
     parser.add_argument("--dry-run", action="store_true",
                          help="Load results and print coverage/latency/error summary; "
                               "exit without calling the judge model.")
+    parser.add_argument("--no-claims", action="store_true",
+                         help="Force holistic grading even if claims/<plot>.yaml exists.")
     args = parser.parse_args()
 
     if args.run_ids:
@@ -73,8 +82,12 @@ def main() -> None:
 
     eval_csv = args.eval_csv or (Path("eval_output") / "eval_scores.csv")
     eval_csv.parent.mkdir(parents=True, exist_ok=True)
+    claim_csv = args.claim_csv or (Path("eval_output") / "claim_scores.csv")
+    claim_csv.parent.mkdir(parents=True, exist_ok=True)
 
     df = load_results(args.output_root, run_ids, models=args.models)
+    if args.plots:
+        df = df[df["plot_name"].isin(args.plots)]
     if df.empty:
         sys.exit(1)
 
@@ -94,7 +107,8 @@ def main() -> None:
     print(f"\nJudge model: {args.judge_model}")
     print(f"Evaluated models: {sorted(judge_model_for)}")
 
-    df_eval = run_evaluations(df, args.truth_root, judge_model_for, eval_csv, delay=args.delay)
+    df_eval = run_evaluations(df, args.truth_root, judge_model_for, eval_csv, delay=args.delay,
+                               no_claims=args.no_claims, claim_csv=claim_csv)
     print(f"\n{len(df_eval)} scored rows in df_eval")
 
     df_eval = df_eval[df_eval["run_id"].isin(run_ids)]

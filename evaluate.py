@@ -14,6 +14,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import yaml
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 
@@ -98,6 +99,158 @@ Scores must be integers 1–5 only. Return ONLY valid JSON with no other text:
   "s3_comparison":        {{"score": <1-5>, "comment": "<one sentence>"}},
   "s4_decision":          {{"score": <1-5>, "comment": "<one sentence>"}},
   "overall":              {{"score": <1-5>, "comment": "<one sentence>"}}
+}}
+"""
+
+
+# ── Atomic-claim checklist judging (opt-in per plot) ────────────────────────────
+# Holistic paragraph-vs-paragraph grading of S1-S3 penalizes correct answers that
+# are simply worded differently from the human truth text (the classic reference-
+# caption paraphrase problem). When claims/<plot>.yaml exists for a plot, S1-S3 are
+# instead graded as "fraction of independent atomic claims correctly confirmed",
+# which is robust to wording differences. Plots with no claims file are unaffected
+# — see load_claims().
+
+CLAIMS_ROOT = Path('claims')
+EVENT_TYPE_CONFIG = Path('results/YAML/config_YAML.json')  # same source truth_helpers.py uses
+
+_EVENT_TYPE_BUCKET = {
+    'collisions': 'collision', 'collision': 'collision',
+    'cosmics': 'noncollision', 'cosmic': 'noncollision',
+    'circulating': 'noncollision',
+}
+
+_claims_cache: dict = {}
+
+
+def load_event_type_map(config_path: Path = EVENT_TYPE_CONFIG) -> dict:
+    """{run_number: event_type} from a saved BatchConfig JSON's run_metadata."""
+    if not config_path.exists():
+        return {}
+    cfg = json.loads(config_path.read_text())
+    return {
+        int(k): v for k, v in cfg.get('run_metadata', {}).get('event_type_map', {}).items()
+    }
+
+
+def load_claims(plot: str, claims_root: Path = CLAIMS_ROOT) -> 'dict | None':
+    """Load claims/<plot>.yaml if it exists, else None (caller falls back to holistic grading)."""
+    if plot not in _claims_cache:
+        path = claims_root / f'{plot}.yaml'
+        _claims_cache[plot] = yaml.safe_load(path.read_text()) if path.exists() else None
+    return _claims_cache[plot]
+
+
+def resolve_claims_for_run(claims_doc: dict, run_number: 'int | None', event_type: str) -> list:
+    """Filter claims_doc's claims to those applicable to this run's event type, with any
+    per-run override applied. A claim resolved to truth == 'n/a' is dropped (not applicable)."""
+    bucket = _EVENT_TYPE_BUCKET.get(str(event_type).lower())
+    overrides = (claims_doc.get('overrides') or {}).get(run_number, {})
+    resolved = []
+    for c in claims_doc.get('claims', []):
+        applies = c.get('applies_to', 'any')
+        if applies != 'any' and applies != bucket:
+            continue
+        truth = overrides.get(c['id'], c.get('truth', True))
+        if truth == 'n/a':
+            continue
+        resolved.append({**c, 'truth': truth, 'required': c.get('required', True)})
+    return resolved
+
+
+def format_claims_block(claims: list) -> str:
+    """Render resolved claims as a section-grouped checklist for the judge prompt."""
+    by_section: dict = {}
+    for c in claims:
+        by_section.setdefault(c['section'], []).append(c)
+    lines = []
+    for col, label in zip(SCORE_COLS[:3], SECTION_LABELS[:3]):  # s1, s2, s3 only
+        section_claims = by_section.get(col, [])
+        if not section_claims:
+            continue
+        lines.append(f'{label} claims:')
+        for c in section_claims:
+            truth_label = 'TRUE' if c['truth'] else 'FALSE'
+            tag = '' if c.get('required', True) else ' [OPTIONAL — do not penalize if omitted, only if contradicted]'
+            lines.append(f"  - [{c['id']}] (should be {truth_label}){tag} {c['text']}")
+    return '\n'.join(lines)
+
+
+CLAIMS_JUDGE_SYSTEM = """\
+You are an expert evaluator for CMS detector quality monitoring (DQM).
+Score the LLM response against the ground truth on each of the 4 sections using the rubrics below.
+Return scores as integers 1–5 only. Do not interpolate (no 3.5 etc.).
+
+SECTIONS 1-3 are graded against an "Atomic claim checklist" provided below the
+ground truth. Each claim is an independent, verifiable fact tagged with its
+correct truth value for this specific run. Grade each section by checking,
+for every claim listed under that section, whether the response CONFIRMS the
+claim consistent with its truth value (correct), CONTRADICTS it (wrong), or
+never addresses it (missing). Do NOT penalize different wording, phrasing,
+or ordering — only penalize factual confirmation/contradiction/omission.
+
+Claims marked [OPTIONAL] are NOT part of the material the response was
+expected to know or infer — treat an optional claim as if it did not exist
+when computing the section's score UNLESS the response explicitly
+contradicts it, in which case it counts against the score exactly like a
+required claim. Never lower a score just because an optional claim is
+missing.
+
+In addition to the section scores, you must also report your per-claim
+verdict for every single claim id shown in the checklist below — one
+entry per id, no omissions — as "confirmed" (response states it, or
+implies it, consistent with its labeled truth value), "contradicted"
+(response states something inconsistent with its labeled truth value), or
+"omitted" (response never addresses it either way).
+
+  1 = 0% of that section's REQUIRED claims correctly confirmed
+  2 = ~25% of required claims correctly confirmed
+  3 = ~50% of required claims correctly confirmed
+  4 = ~75% of required claims correctly confirmed
+  5 = 100% of required claims correctly confirmed (or the section has
+      only optional claims and none are contradicted)
+  NOTE (S1 only): citing the wrong event type (collision vs non-collision)
+  contradicts every S1 claim and is an automatic score of 1.
+
+SECTION 4 — Final decision (does the Good/Bad verdict match truth?):
+  1 = Wrong verdict with no justification
+  2 = Wrong verdict but with some reasoning
+  3 = Correct verdict but with weak or missing justification
+  4 = Correct verdict with sound justification, minor gap
+  5 = Correct verdict with clear reasoning referencing both the instruction and the plot
+
+OVERALL — Holistic quality across all four sections:
+  1 = Fails on multiple sections, not usable
+  2 = Gets the verdict right but reasoning is largely wrong
+  3 = Partially useful — correct on some sections but unreliable
+  4 = Solid response, correct verdict and mostly sound reasoning
+  5 = Matches truth across all four sections\
+"""
+
+CLAIMS_JUDGE_PROMPT_TEMPLATE = """\
+## Ground truth (human expert):
+{truth}
+
+## Atomic claim checklist for this specific plot/run
+{claims_block}
+
+## LLM response to evaluate:
+{response}
+
+Score the LLM response on each section using the rubric in your instructions.
+Scores must be integers 1–5 only. Return ONLY valid JSON with no other text.
+Include one entry in "claims" for every claim id listed in the checklist
+above, no omissions:
+{{
+  "s1_instruction_quote": {{"score": <1-5>, "comment": "<one sentence>"}},
+  "s2_plot_description":  {{"score": <1-5>, "comment": "<one sentence>"}},
+  "s3_comparison":        {{"score": <1-5>, "comment": "<one sentence>"}},
+  "s4_decision":          {{"score": <1-5>, "comment": "<one sentence>"}},
+  "overall":              {{"score": <1-5>, "comment": "<one sentence>"}},
+  "claims": {{
+    "<claim_id>": {{"verdict": "confirmed|contradicted|omitted", "comment": "<short, optional>"}},
+    ...
+  }}
 }}
 """
 
@@ -317,9 +470,14 @@ def judge(
     model: str,
     judge_system: str = JUDGE_SYSTEM,
     judge_prompt_template: str = JUDGE_PROMPT_TEMPLATE,
+    **extra_fmt,
 ) -> dict:
-    """Call the judge model. Returns a scores dict or {'error': ...}."""
-    prompt = judge_prompt_template.format(truth=truth_text, response=response_text)
+    """Call the judge model. Returns a scores dict or {'error': ...}.
+
+    extra_fmt: additional .format() kwargs for judge_prompt_template (e.g. claims_block
+    when using CLAIMS_JUDGE_PROMPT_TEMPLATE).
+    """
+    prompt = judge_prompt_template.format(truth=truth_text, response=response_text, **extra_fmt)
     result = query(prompt, model=ModelConfig(name=model),
                    system=judge_system, context=NoContext())
     if result.get('error'):
@@ -342,15 +500,22 @@ def run_evaluations(
     delay: float = 1.0,
     judge_system: str = JUDGE_SYSTEM,
     judge_prompt_template: str = JUDGE_PROMPT_TEMPLATE,
+    no_claims: bool = False,
+    claim_csv: 'Path | None' = None,
 ) -> pd.DataFrame:
     """
     Run LLM judge over df_results, appending new scores to eval_csv immediately
     so interrupted runs resume from where they left off.
 
     judge_model_for: {evaluated_model_name: [judge_model, ...]}
-    Returns the full scored DataFrame (cached + new rows).
+    claim_csv: where per-claim verdicts (confirmed/contradicted/omitted) are appended
+        for claims-mode rows. Defaults to eval_csv.parent / 'claim_scores.csv'.
+    Returns the full scored DataFrame (cached + new rows) for eval_csv; per-claim
+    verdicts are written as a side effect and not part of the returned DataFrame.
     """
     Path(eval_csv).parent.mkdir(parents=True, exist_ok=True)
+    claim_csv = Path(claim_csv) if claim_csv else Path(eval_csv).parent / 'claim_scores.csv'
+    claim_csv.parent.mkdir(parents=True, exist_ok=True)
 
     if Path(eval_csv).exists():
         df_eval = pd.read_csv(eval_csv)
@@ -360,6 +525,7 @@ def run_evaluations(
         df_eval = pd.DataFrame()
         done    = set()
 
+    event_type_map = load_event_type_map()
     new_rows: list[dict] = []
 
     for _, row in df_results.iterrows():
@@ -371,21 +537,39 @@ def run_evaluations(
             continue
         truth_text = truth_file.read_text().strip()
 
+        # Opt-in atomic-claim checklist grading for S1-S3 (see load_claims()) — falls
+        # back to holistic grading (judge_system/judge_prompt_template as passed in)
+        # for any plot without a claims/<plot>.yaml file.
+        claims_doc = None if no_claims else load_claims(row['plot_name'])
+        row_judge_system, row_judge_prompt_template, extra_fmt = (
+            judge_system, judge_prompt_template, {}
+        )
+        cache_suffix = ''
+        resolved: list = []
+        if claims_doc:
+            run_number = _extract_run_number(row['image'])
+            event_type = event_type_map.get(run_number, 'unknown')
+            resolved = resolve_claims_for_run(claims_doc, run_number, event_type)
+            extra_fmt = {'claims_block': format_claims_block(resolved)}
+            row_judge_system, row_judge_prompt_template = CLAIMS_JUDGE_SYSTEM, CLAIMS_JUDGE_PROMPT_TEMPLATE
+            cache_suffix = '#claims-v3'
+
         for judge_model in judge_model_for.get(row['model'], []):
             if judge_model == row['model']:
                 continue
-            if (row['file'], judge_model) in done:
+            cache_label = f'{judge_model}{cache_suffix}'
+            if (row['file'], cache_label) in done:
                 continue
 
             print(
                 f"  [{short_name(row['model']):18s}]"
                 f" run={row['run_id']:10s}"
                 f" img={Path(row['image']).name}"
-                f" judge={short_name(judge_model)} ...",
+                f" judge={short_name(judge_model)}{cache_suffix} ...",
                 end=' ', flush=True,
             )
             scores = judge(truth_text, row['response'], judge_model,
-                           judge_system, judge_prompt_template)
+                           row_judge_system, row_judge_prompt_template, **extra_fmt)
             if 'error' in scores:
                 print(f"ERROR: {scores['error']}")
                 continue
@@ -397,7 +581,7 @@ def run_evaluations(
                 'plot_name':            row['plot_name'],
                 'image':                row['image_name'],
                 'model':                row['model'],
-                'judge_model':          judge_model,
+                'judge_model':          cache_label,
                 'generation_latency_s': row.get('generation_latency_s'),
                 'latency_s':            row.get('latency_s'),
                 **{k:              scores.get(k, {}).get('score')
@@ -408,11 +592,33 @@ def run_evaluations(
                    for k in SCORE_COLS},
             }
             new_rows.append(new_row)
-            done.add((row['file'], judge_model))
+            done.add((row['file'], cache_label))
 
             pd.DataFrame([new_row]).to_csv(
                 eval_csv, mode='a', header=not Path(eval_csv).exists(), index=False,
             )
+
+            if resolved and isinstance(scores.get('claims'), dict):
+                judged = scores['claims']
+                claim_rows = [{
+                    'file':        row['file'],
+                    'run_id':      row['run_id'],
+                    'plot_name':   row['plot_name'],
+                    'image':       row['image_name'],
+                    'model':       row['model'],
+                    'judge_model': cache_label,
+                    'claim_id':    c['id'],
+                    'section':     c['section'],
+                    'applies_to':  c.get('applies_to', 'any'),
+                    'required':    c['required'],
+                    'truth':       c['truth'],
+                    'verdict':     judged.get(c['id'], {}).get('verdict'),
+                    'comment':     judged.get(c['id'], {}).get('comment'),
+                } for c in resolved]
+                pd.DataFrame(claim_rows).to_csv(
+                    claim_csv, mode='a', header=not claim_csv.exists(), index=False,
+                )
+
             time.sleep(delay)
 
     if new_rows:
@@ -430,6 +636,55 @@ def load_eval_csv(eval_csv: Path) -> pd.DataFrame:
     """Load a saved eval_scores.csv and recompute derived columns."""
     df = pd.read_csv(eval_csv)
     return _add_derived_cols(df)
+
+
+def load_claim_csv(claim_csv: Path) -> pd.DataFrame:
+    """Load a saved claim_scores.csv (per-claim verdicts, long format). No derived
+    columns needed — one row per (file, judge_model, claim_id)."""
+    return pd.read_csv(claim_csv)
+
+
+def claim_recall_precision(
+    df_claims: pd.DataFrame,
+    group_cols: 'list[str]',
+    *,
+    run_id=None,
+    plot_name=None,
+    model=None,
+    judge_model=None,
+) -> pd.DataFrame:
+    """Aggregate per-claim verdicts (from load_claim_csv()) into recall/precision
+    per group_cols (e.g. ['model_short'] or ['run_id', 'model_short']).
+
+    recall    = confirmed / total, over required==True claims (omission costs recall).
+    precision = confirmed / (confirmed + contradicted), over required==False claims
+                (omission is free; only contradicting an optional claim costs precision).
+
+    run_id, plot_name, model, judge_model — filter controls (None = all,
+      exact value, or a list to restrict to), same convention as the plot
+      functions. judge_model matters here in particular: claim_scores.csv can
+      accumulate rows from more than one judge_model over time, and mixing
+      them into one recall/precision number (unless judge_model is also in
+      group_cols) silently blends different judges' verdicts.
+    """
+    df_claims = _apply_filters(df_claims, run_id=run_id, plot_name=plot_name, model=model, judge_model=judge_model)
+    req = df_claims[df_claims['required'] == True]
+    opt = df_claims[df_claims['required'] == False]
+
+    recall = (
+        req.assign(confirmed=req['verdict'] == 'confirmed')
+           .groupby(group_cols)['confirmed'].mean()
+           .rename('recall')
+    )
+
+    opt_scored = opt[opt['verdict'].isin(['confirmed', 'contradicted'])]
+    precision = (
+        opt_scored.assign(confirmed=opt_scored['verdict'] == 'confirmed')
+                  .groupby(group_cols)['confirmed'].mean()
+                  .rename('precision')
+    )
+
+    return pd.concat([recall, precision], axis=1).reset_index()
 
 
 def _extract_run_number(image_str: str) -> 'int | None':
@@ -480,8 +735,27 @@ def report_latency(df: pd.DataFrame, group_col: str = 'model_short') -> None:
         )
 
 
-def report_scores(df_eval: pd.DataFrame, group_col: str = 'model') -> None:
-    """Print section score tables from the scored DataFrame."""
+def report_scores(
+    df_eval: pd.DataFrame,
+    group_col: str = 'model',
+    *,
+    run_id=None,
+    plot_name=None,
+    model=None,
+    judge_model=None,
+) -> None:
+    """Print section score tables from the scored DataFrame.
+
+    run_id, plot_name, model, judge_model — filter controls (None = all,
+      exact value, or a list to restrict to), same convention as the plot
+      functions. judge_model matters here in particular: df_eval commonly
+      stacks rows from more than one judge_model (different judges, or
+      holistic vs `#claims-vN` grading of the same judge) — averaging across
+      them without pinning down judge_model silently mixes incompatible
+      scoring schemes.
+    """
+    df_eval = _apply_filters(df_eval, run_id=run_id, plot_name=plot_name, model=model, judge_model=judge_model)
+
     print(f'=== Mean section scores by {group_col} ===')
     display(df_eval.groupby(group_col)[SCORE_COLS].mean().round(2))
 
@@ -744,6 +1018,24 @@ def _apply_filters(df: pd.DataFrame, **filters) -> pd.DataFrame:
     return df
 
 
+def _draw_heatmap_panel(ax, pivot, row_vals, col_labels, cmap, vmin, vmax, cbar_label, title, fmt='{:.1f}'):
+    """Shared imshow-grid renderer for plot_section_heatmap and plot_delta_heatmap."""
+    im = ax.imshow(pivot.values, cmap=cmap, vmin=vmin, vmax=vmax, aspect='auto')
+    ax.set_xticks(range(len(col_labels)))
+    ax.set_xticklabels(col_labels, rotation=20, ha='right', fontsize=9)
+    ax.set_yticks(range(len(row_vals)))
+    ax.set_yticklabels([short_name(str(v)) for v in row_vals], fontsize=9)
+    ax.set_title(title, fontsize=10)
+    plt.colorbar(im, ax=ax, label=cbar_label)
+    for r in range(len(row_vals)):
+        for c in range(len(col_labels)):
+            v = pivot.values[r, c]
+            if pd.notna(v):
+                ax.text(c, r, fmt.format(v), ha='center', va='center',
+                        fontsize=9, fontweight='bold')
+    return im
+
+
 def plot_section_heatmap(
     df_eval: pd.DataFrame,
     row_col: str,
@@ -754,6 +1046,7 @@ def plot_section_heatmap(
     run_id=None,
     plot_name=None,
     model=None,
+    judge_model=None,
     agg: str = 'mean',
 ):
     """
@@ -766,17 +1059,23 @@ def plot_section_heatmap(
       heatmaps instead of grouped bars.
 
     Dimensions:
-      run_id, plot_name, model — filter controls, each either None (include
-        all, default), an exact value, or a list of values to restrict to.
-        row_col (and subplot_col, if used) is typically one of these three
-        (the axis/axes being compared).
+      run_id, plot_name, model, judge_model — filter controls, each either
+        None (include all, default), an exact value, or a list of values to
+        restrict to. row_col (and subplot_col, if used) is typically one of
+        these four (the axis/axes being compared).
+        judge_model usually pins down a single judge (there's rarely a
+        reason to average scores across different judges) — but if you pass
+        a list of judge_models and subplot_col isn't otherwise specified, it
+        is used as the subplot breakdown automatically (one panel per judge).
       run_number — never filtered; always collapsed via `agg`
         ('mean' default, 'median', or 'std').
 
     Returns the Axes (single panel) or a list of Axes (one per subplot_col
     value) for further styling.
     """
-    sub_all = _apply_filters(df_eval, run_id=run_id, plot_name=plot_name, model=model)
+    if subplot_col is None and isinstance(judge_model, (list, tuple, set)):
+        subplot_col = 'judge_model'
+    sub_all = _apply_filters(df_eval, run_id=run_id, plot_name=plot_name, model=model, judge_model=judge_model)
     panels  = (
         sorted(sub_all[subplot_col].dropna().unique(), key=str)
         if subplot_col is not None else [None]
@@ -804,21 +1103,8 @@ def plot_section_heatmap(
     )
 
     for i, (panel_val, row_vals, pivot) in enumerate(panel_data):
-        ax = axes[i, 0]
-        im = ax.imshow(pivot.values, cmap=cmap, vmin=vmin, vmax=vmax, aspect='auto')
-        ax.set_xticks(range(len(SCORE_COLS)))
-        ax.set_xticklabels(SECTION_LABELS, rotation=20, ha='right', fontsize=9)
-        ax.set_yticks(range(len(row_vals)))
-        ax.set_yticklabels([short_name(str(v)) for v in row_vals], fontsize=9)
         panel_title = title if panel_val is None else f'{title}  |  {short_name(str(panel_val))}'
-        ax.set_title(panel_title, fontsize=10)
-        plt.colorbar(im, ax=ax, label=cbar_label)
-        for r in range(len(row_vals)):
-            for c in range(len(SCORE_COLS)):
-                v = pivot.values[r, c]
-                if pd.notna(v):
-                    ax.text(c, r, f'{v:.1f}', ha='center', va='center',
-                            fontsize=9, fontweight='bold')
+        _draw_heatmap_panel(axes[i, 0], pivot, row_vals, SECTION_LABELS, cmap, vmin, vmax, cbar_label, panel_title)
 
     plt.tight_layout()
     _save(fig, out_path)
@@ -834,16 +1120,20 @@ def plot_s4_accuracy(
     run_id=None,
     plot_name=None,
     model=None,
+    judge_model=None,
 ):
     """
     Bar chart of S4 (Good/Bad) decision accuracy per row_col value.
 
-    run_id, plot_name, model — filter controls (None = all, exact value, or a
-      list to restrict to), same convention as plot_section_heatmap.
+    run_id, plot_name, model, judge_model — filter controls (None = all,
+      exact value, or a list to restrict to), same convention as
+      plot_section_heatmap. judge_model usually pins down a single judge —
+      there's no subplot mechanism here, so a list just pools those judges'
+      rows together rather than breaking them out into separate panels.
 
     Returns the Axes for further styling.
     """
-    sub      = _apply_filters(df_eval, run_id=run_id, plot_name=plot_name, model=model)
+    sub      = _apply_filters(df_eval, run_id=run_id, plot_name=plot_name, model=model, judge_model=judge_model)
     row_vals = sorted(sub[row_col].dropna().unique(), key=str)
     acc      = sub.groupby(row_col)['s4_correct'].mean().mul(100).reindex(row_vals)
     colors   = plt.cm.Set1(np.linspace(0, 1, len(row_vals)))
@@ -997,6 +1287,7 @@ def plot_comparison(
     run_id=None,
     plot_name=None,
     model=None,
+    judge_model=None,
     agg: str = 'mean',
 ):
     """
@@ -1007,16 +1298,21 @@ def plot_comparison(
     Example: compare_col='run_id', row_col='model'
       → for each model, shows localRAG vs YAML bars side-by-side per section.
 
-    run_id, plot_name, model — filter controls (None = all, exact value, or a
-      list to restrict to), same convention as plot_section_heatmap. Useful to
-      narrow down further when compare_col/row_col are a different pair of
-      dimensions (e.g. restrict plot_name while comparing run_id × model).
+    run_id, plot_name, model, judge_model — filter controls (None = all,
+      exact value, or a list to restrict to), same convention as
+      plot_section_heatmap. Useful to narrow down further when
+      compare_col/row_col are a different pair of dimensions (e.g. restrict
+      plot_name while comparing run_id × model). judge_model usually pins
+      down a single judge; row_col already owns the subplot axis here, so a
+      list just pools those judges' rows together rather than breaking them
+      into separate panels (pass judge_model as compare_col/row_col instead
+      if you want a panel/group per judge).
     run_number — never filtered; always collapsed via `agg`
       ('mean' default, 'median', or 'std').
 
     Returns the array of Axes for further styling.
     """
-    sub_all      = _apply_filters(df_eval, run_id=run_id, plot_name=plot_name, model=model)
+    sub_all      = _apply_filters(df_eval, run_id=run_id, plot_name=plot_name, model=model, judge_model=judge_model)
     row_vals     = sorted(sub_all[row_col].dropna().unique(), key=str)
     compare_vals = sorted(sub_all[compare_col].dropna().unique(), key=str)
     colors       = plt.cm.Set2(np.linspace(0, 1, len(compare_vals)))
@@ -1058,3 +1354,71 @@ def plot_comparison(
     plt.tight_layout()
     _save(fig, out_path)
     return axes if len(row_vals) > 1 else axes[0, 0]
+
+
+def compare_evaluations(
+    df_eval: pd.DataFrame,
+    row_col: str,
+    compare_col: str,
+    val_a,
+    val_b,
+    *,
+    run_id=None,
+    plot_name=None,
+    model=None,
+    judge_model=None,
+    score_cols: 'list[str]' = SCORE_COLS,
+) -> pd.DataFrame:
+    """
+    Per-row_col, per-section delta table: mean(score | compare_col=val_b) -
+    mean(score | compare_col=val_a), for two slices of df_eval.
+
+    run_id, plot_name, model, judge_model — filter controls, same convention
+      as plot_section_heatmap (None = all, exact value, or list to restrict
+      to). Use these to pin down every dimension except row_col and
+      compare_col, e.g. run_id=RUN_ID, judge_model=JUDGE to compare
+      compare_col='judge_model', val_a=JUDGE, val_b=f'{JUDGE}#claims-v3'
+      (claims vs holistic, judge_model itself is the compare axis so leave
+      it out of the judge_model filter), or model=... , judge_model=JUDGE
+      to compare compare_col='run_id', val_a='YAML', val_b='YAML_ref_captioned'.
+
+    Returns a DataFrame indexed by row_col values, columns = score_cols,
+    values = the delta — ready to hand to plot_delta_heatmap as the z axis.
+    """
+    sub = _apply_filters(df_eval, run_id=run_id, plot_name=plot_name, model=model, judge_model=judge_model)
+    sub_a = sub[sub[compare_col] == val_a]
+    sub_b = sub[sub[compare_col] == val_b]
+    row_vals = sorted(set(sub_a[row_col].dropna()) | set(sub_b[row_col].dropna()), key=str)
+    piv_a = sub_a.groupby(row_col)[score_cols].mean().reindex(row_vals)
+    piv_b = sub_b.groupby(row_col)[score_cols].mean().reindex(row_vals)
+    return (piv_b - piv_a)
+
+
+def plot_delta_heatmap(
+    delta: pd.DataFrame,
+    title: str,
+    out_path: 'Path | None' = None,
+    *,
+    vmax: 'float | None' = None,
+):
+    """
+    Heatmap of a delta table from compare_evaluations(): rows = row_col
+    values, columns = sections, cells = delta (b - a). Diverging colormap
+    centered at 0 (green = improvement, red = regression).
+
+    vmax: symmetric color-scale bound (defaults to the largest |delta| in
+      the table, floored at 0.1 to avoid a degenerate all-zero scale).
+    """
+    row_vals = list(delta.index)
+    if vmax is None:
+        abs_vals = np.abs(delta.values)
+        vmax = max(float(np.nanmax(abs_vals)) if np.isfinite(abs_vals).any() else 0.0, 0.1)
+    fig, ax = plt.subplots(figsize=(9, max(2.5, 0.55 * len(row_vals) + 1.5)))
+    _draw_heatmap_panel(
+        ax, delta, row_vals, SECTION_LABELS,
+        cmap='RdYlGn', vmin=-vmax, vmax=vmax, cbar_label='Δ score',
+        title=title, fmt='{:+.1f}',
+    )
+    plt.tight_layout()
+    _save(fig, out_path)
+    return ax
