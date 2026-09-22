@@ -305,6 +305,96 @@ ROOT file            DQMData/Run {run}/L1T/Run summary/L1TStage2CaloLayer1/ecalO
   rather than failing opaquely.
 - Responses are cached under `.dqm_cache/` keyed by URL. Delete it to force refetching.
 
+## MCP Server
+
+`dqm_mcp/` exposes the pipeline above as an [MCP](https://modelcontextprotocol.io) server:
+give it a run number, a subsystem and a plot number, and it fetches the plot from the
+**online** DQM GUI, attaches the shifter instructions, asks a vision model and returns the
+response with a parsed GOOD/BAD verdict. It speaks plain MCP over stdio or HTTP, so any MCP
+client works — an agent harness, an IDE, or a script using the `mcp` client library. The
+model is whatever you point it at through the provider registry in `owui_client.py`
+(`litellm`, `owui`, `nrp`); nothing is tied to one vendor.
+
+### Run
+
+```bash
+pixi run python -m dqm_mcp                                            # stdio (default)
+pixi run python -m dqm_mcp --transport streamable-http --host 0.0.0.0 --port 8000
+```
+
+The server `chdir`s to the repository root, loads `.env` from there, and logs to stderr only.
+Prerequisites are the same as the CLIs: a valid X.509 proxy for fetching (see
+*Fetching from the DQM GUI*) and `OWUI_API_KEY` plus a provider URL/key in `.env` for
+querying. The server starts without either; the affected tools return a clear error.
+
+Generic client configuration (the shape every MCP client accepts, key names vary):
+
+```json
+{"command": "pixi", "args": ["run", "python", "-m", "dqm_mcp"], "cwd": "/path/to/dqm-vision-bench"}
+```
+
+`cwd` must be the repository root: `python -m dqm_mcp` finds the package through it. If a
+client cannot set a working directory, use
+`pixi run --manifest-path /path/to/dqm-vision-bench/pixi.toml python -m dqm_mcp` instead.
+
+For HTTP clients, the endpoint is `http://<host>:<port>/mcp`. There is no authentication
+on that endpoint: anyone who can reach it spends your model budget and fetches with your
+grid identity, so keep it on localhost or behind your own proxy.
+
+### Tools
+
+| Tool | Inputs | Returns |
+|---|---|---|
+| `list_subsystems` | — | subsystems with plot counts and whether `plot_instructions/<sub>.yaml` exists |
+| `list_plots` | `subsystem` | one row per plot: `plot_number`, `title`, `folder`, `n_panels`, ME paths |
+| `get_plot_instructions` | `subsystem`, `plot_number`, [`folder`] | instruction text, known issues, layout description |
+| `fetch_plot_image` | `run`, `subsystem`, `plot_number`, [`folder`, `overwrite`] | one PNG per panel + metadata (URLs, paths, sizes, sources, placeholder flags, budget) |
+| `query_plot` | `run`, `subsystem`, `plot_number`, `event_type`, [`folder`, `model`, `provider`, `use_cache`, `overwrite_image`] | raw response, `sections` (instructions/observations/assessment/verdict_text), `verdict` GOOD/BAD/null, latencies, `cached`, `result_file`, `budget` |
+| `get_cached_response` | `run`, `subsystem`, `plot_number`, [`folder`, `model`] | a saved `query_plot` answer, or `found: false` |
+| `server_status` | — | proxy state, default model/provider, budget, configured paths |
+
+Semantics worth knowing:
+
+- **Plot numbers** are the leading token of the shift-layout title (`'02'`, `'B'`);
+  unpadded digits are accepted. When one number covers several distinct plots (e.g.
+  BeamPixel `B` = muX/muY/muZ vs lumi), the error lists the `folder` values to choose from.
+- **Multi-panel plots.** Shift-layout entries that share a number and title (the `_grpN`
+  stems from `build_image_config`) are one plot. All panels are fetched and sent in a
+  single model message, giving one response and one verdict. Results are saved as
+  `results/<run_id>/<folder>/<folder>_run<RUN>_<model>.txt` in the batch-pipeline format,
+  so `evaluate.py` can load them.
+- **Run metadata is an input.** `query_plot` requires `event_type`
+  (`collisions` | `cosmics` | `circulating`), which the operator supplies; the server does
+  not look it up. It is appended to the prompt exactly as the batch pipeline does.
+- **Reference images** are read from `ref_images/<subsystem>/<folder>/` (override with
+  `DQM_MCP_REF_DIR`) when that directory exists; otherwise the query goes without them.
+- **Guardrail.** Network fetches from the DQM GUI are capped per call
+  (`DQM_MCP_MAX_IMAGES_PER_CALL`, default 12 — the largest plot has 11 panels) and per
+  rolling hour (`DQM_MCP_MAX_FETCHES_PER_HOUR`, default 60). Panels already under
+  `images/` or in `.dqm_cache/` are free and always served. A call that would exceed the
+  hourly budget is refused whole, with the remaining count and reset time in the error.
+
+### Configuration
+
+All optional, read from the environment / `.env`:
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `OWUI_MODEL` / `DEFAULT_PROVIDER` | — / `litellm` | default model and provider for `query_plot` |
+| `DQM_MCP_IMAGE_ROOT` | `images` | where fetched panels are written |
+| `DQM_MCP_RESULTS_ROOT` / `DQM_MCP_RUN_ID` | `results` / `MCP` | where answers are saved |
+| `DQM_MCP_REF_DIR` | `ref_images` | reference images root |
+| `DQM_MCP_STORE_DIR` | `plot_instructions` | instruction YAMLs |
+| `DQM_MCP_CACHE_DIR` | `.dqm_cache` | GUI response cache |
+| `DQM_MCP_WIDTH` / `DQM_MCP_HEIGHT` | `900` / `700` | rendered plot size |
+| `DQM_MCP_MAX_IMAGES_PER_CALL` | `12` | per-call panel cap |
+| `DQM_MCP_MAX_FETCHES_PER_HOUR` | `60` | rolling-hour network fetch cap |
+
+Layout: `resolve.py` (plot lookup), `fetch.py` (GUI, budget), `context.py` (instructions),
+`query.py` (model), `parse.py` (sections/verdict), `results.py` (result files),
+`budget.py`, `config.py`; only `server.py` imports the MCP SDK. The others are plain
+functions usable from a notebook.
+
 ## Batch Querying
 
 `run_batch_cli.py` drives `owui_client.run_batch()` — it sends every image under
