@@ -22,11 +22,22 @@ you already have and reports clearly when it is missing or expired.
 Usage
 -----
     from dqm_gui_client import DQMGUISession, produce_images_from_gui
-    from shift_layout_helpers import build_image_config
+    from shift_layout_helpers import build_image_config, gui_path
 
+    # Online workspace is the primary, confirmed path (verified 2026-09-15
+    # against live cmsweb, run 398185, L1T ecalOccRecdEtWgt — see the URL
+    # templates block below). It needs no dataset: the GUI has one implicit
+    # dataset ("/Global/Online/ALL") for whatever run is currently live.
+    sess = DQMGUISession(workspace="online")
+    png  = sess.fetch_png(398185, gui_path("L1T/L1TStage2CaloLayer1/ecalOccRecdEtWgt",
+                                           "online"))
+
+    # Offline is for extension — same convention, not yet independently
+    # confirmed against live cmsweb — and needs an explicit dataset per run.
     sess = DQMGUISession(workspace="offline")
-    png  = sess.fetch_png(398185, "/ZeroBias/Run2024C-PromptReco-v1/DQMIO",
-                          "L1T/Run summary/L1TStage2CaloLayer1/ecalOccRecdEtWgt")
+    png  = sess.fetch_png(398185,
+                          gui_path("L1T/L1TStage2CaloLayer1/ecalOccRecdEtWgt", "offline"),
+                          dataset="/ZeroBias/Run2024C-PromptReco-v1/DQMIO")
 
 See fetch_gui_cli.py for the command-line driver.
 """
@@ -217,7 +228,7 @@ class DQMGUISession:
 
     def __init__(
         self,
-        workspace: str = "offline",
+        workspace: str = "online",
         proxy: str | None = None,
         ca_bundle: str | bool | None = None,
         cache_dir: str | Path | None = ".dqm_cache",
@@ -493,7 +504,7 @@ def produce_images_from_gui(
     runs: list[str | int],
     image_config: list[dict] | dict[str, str],
     dataset: str | None = None,
-    workspace: str = "offline",
+    workspace: str = "online",
     outdir: str = "images",
     width: int = 900,
     height: int = 700,

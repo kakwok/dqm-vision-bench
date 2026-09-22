@@ -12,21 +12,33 @@ Requires a CMS VOMS proxy for anything that touches the network:
 
     voms-proxy-init -voms cms -valid 24:00
 
-Examples
---------
-  # Preview the URLs that would be fetched — needs NO proxy and makes no request
-  python3 fetch_gui_cli.py --runs 398185 --subsystem L1T --plot 00 --dry-run \
-      --dataset '/ZeroBias/Run2024C-PromptReco-v1/DQMIO'
+Examples (online workspace — the primary, confirmed path)
+----------------------------------------------------------
+Online needs no --dataset: the GUI has one implicit dataset
+("/Global/Online/ALL") for whatever run is currently live. Confirmed working
+against live cmsweb 2026-09-15 (run 398185, L1T ecalOccRecdEtWgt).
 
-  # Check the proxy before committing to a long run
+  # Check the proxy before committing to a run
   python3 fetch_gui_cli.py --check-proxy
 
-  # Real fetch
-  python3 fetch_gui_cli.py --runs 398185 398186 --subsystem L1T \
-      --dataset '/ZeroBias/Run2024C-PromptReco-v1/DQMIO' --outdir images
+  # Preview the URLs that would be fetched — needs NO proxy, no request made
+  python3 fetch_gui_cli.py --runs 398185 --subsystem L1T --plot 00 \
+      --workspace online --dry-run
 
-  # Online workspace needs no dataset
-  python3 fetch_gui_cli.py --runs 398185 --subsystem L1T --workspace online
+  # Real fetch
+  python3 fetch_gui_cli.py --runs 398185 --subsystem L1T \
+      --workspace online --outdir images
+
+Examples (offline workspace — for extension; not yet independently confirmed)
+-------------------------------------------------------------------------------
+Offline is the historical archive and needs an explicit --dataset per run
+(discoverable in principle via list_samples(), itself unconfirmed — see
+dqm_gui_client.py). Treat this workspace as a starting point to extend, not
+as validated.
+
+  python3 fetch_gui_cli.py --runs 398185 398186 --subsystem L1T \
+      --workspace offline --dataset '/ZeroBias/Run2024C-PromptReco-v1/DQMIO' \
+      --outdir images
 """
 from __future__ import annotations
 
@@ -76,7 +88,7 @@ def main():
                         help="Offline dataset, e.g. "
                              "'/ZeroBias/Run2024C-PromptReco-v1/DQMIO'. "
                              "Not needed for --workspace online.")
-    parser.add_argument("--workspace", default=os.environ.get("DQM_WORKSPACE", "offline"),
+    parser.add_argument("--workspace", default=os.environ.get("DQM_WORKSPACE", "online"),
                         choices=("offline", "online"))
     parser.add_argument("--outdir", default="images")
     parser.add_argument("--width",  type=int, default=900)

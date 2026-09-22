@@ -225,7 +225,7 @@ voms-proxy-info -all | grep -E 'subject|timeleft|VO'   # VO must be cms
 Optional `.env` keys (all are *paths*, not secrets — the proxy file is the credential):
 
 ```bash
-DQM_WORKSPACE=offline                            # offline | online
+DQM_WORKSPACE=online                             # online (primary) | offline (extension)
 X509_USER_PROXY=/tmp/x509up_u1000                # default: /tmp/x509up_u<uid>
 DQM_CA_BUNDLE=/etc/grid-security/certificates    # CERN Grid CA
 ```
@@ -238,37 +238,54 @@ The client never creates, renews or destroys a proxy. It reads the one you have,
 when under two hours remain, and turns cmsweb's bare `401` into a message saying whether
 the proxy expired mid-run or was rejected outright.
 
-### Usage
+### Usage — online workspace (primary, confirmed path, and the default)
+
+Run through `pixi run` so the interpreter has `requests`:
 
 ```bash
-# Preview the URLs — no proxy needed, no network call made
-python3 fetch_gui_cli.py --runs 398185 --subsystem L1T --plot 00 --dry-run \
-    --dataset '/ZeroBias/Run2024C-PromptReco-v1/DQMIO'
-
 # Check proxy status
-python3 fetch_gui_cli.py --check-proxy
+pixi run python3 fetch_gui_cli.py --check-proxy
+
+# Preview the URLs — no proxy needed, no network call made
+pixi run python3 fetch_gui_cli.py --runs 398185 --subsystem L1T --plot 00 --dry-run
 
 # Fetch
-python3 fetch_gui_cli.py --runs 398185 398186 --subsystem L1T \
-    --dataset '/ZeroBias/Run2024C-PromptReco-v1/DQMIO' --outdir images
-
-# Online workspace takes no dataset
-python3 fetch_gui_cli.py --runs 398185 --subsystem L1T --workspace online
+pixi run python3 fetch_gui_cli.py --runs 398185 --subsystem L1T --outdir images
 ```
 
+`--workspace` defaults to `online`, and online needs no `--dataset` — the GUI has one
+implicit dataset (`/Global/Online/ALL`) for whatever run is currently live. This path is
+confirmed against live cmsweb (2026-09-15, run 398185, `L1T_00_CaloLayer1ECALoccupancy`)
+— see Caveats below.
+
 Start with `--dry-run`. It needs no credential and prints exactly what would be requested,
-which is the cheapest way to catch a wrong dataset or plot selection.
+which is the cheapest way to catch a wrong plot selection before spending a request.
 
 | Flag | Description |
 |---|---|
 | `--runs` | One or more run numbers |
 | `--subsystem` / `--plot` | Plot selection, same semantics as `dqm_plot.py` |
-| `--dataset` | Required for `offline`; implicit for `online` |
-| `--workspace` | `offline` (default) or `online` |
+| `--workspace` | `online` (default) or `offline`; override the default via `DQM_WORKSPACE` in `.env` |
+| `--dataset` | Required for `offline`; not used for `online` |
 | `--overwrite` | Re-fetch even if the PNG exists (default: skip) |
 | `--no-cache` | Bypass the `.dqm_cache/` response cache |
 | `--dry-run` | Print URLs and exit; no proxy, no network |
 | `--check-proxy` | Report proxy status and exit |
+
+### Extending to the offline workspace
+
+Offline is the historical archive — the natural next step once online is working end to
+end — but its URL template and `--dataset` discovery are **not yet independently
+confirmed** against live cmsweb (see Caveats). It needs an explicit dataset per run:
+
+```bash
+pixi run python3 fetch_gui_cli.py --runs 398185 --subsystem L1T \
+    --workspace offline --dataset '/ZeroBias/Run2024C-PromptReco-v1/DQMIO' --outdir images
+```
+
+Treat this as a starting point to validate and extend, the way the online path was: run
+`--dry-run` first, then spike one plot with `curl` against the printed URL before trusting
+a batch run.
 
 ### Workspace path mapping
 
