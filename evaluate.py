@@ -47,13 +47,26 @@ You are an expert evaluator for CMS detector quality monitoring (DQM).
 Score the LLM response against the ground truth on each of the 4 sections using the rubrics below.
 Return scores as integers 1–5 only. Do not interpolate (no 3.5 etc.).
 
+GENERAL RULE: a factual contradiction of a stated ground-truth detail caps
+that section's score at 1–2, regardless of how well-organized, verbose, or
+confidently-worded the response is. Do not award partial credit for
+confident-but-wrong reasoning just because it is fluent or on-topic. Presence
+of a correct statement somewhere in the response does not earn credit if the
+response also states or applies something that contradicts it — check that
+the response actually selects and commits to the correct fact, not merely
+that the correct fact appears in the text somewhere.
+
 SECTION 1 — Instruction quote (did it cite the right rule?):
   1 = Wrong event type cited (e.g. cosmic rules for a collision plot), or no quote at all
   2 = Correct event type but quotes irrelevant or tangential instruction
   3 = Correct event type, partially relevant quote but misses the key quality criterion
   4 = Correct event type and relevant quote, minor omission
   5 = Correct event type, quotes the exact relevant quality criterion verbatim
-  NOTE: citing the wrong event type is an automatic score of 1 regardless of other quality.
+  NOTE: citing the wrong event type is an automatic score of 1 regardless of
+  other quality. This includes quoting or applying BOTH event types'
+  criteria without clearly selecting and committing to only the correct one
+  — dumping the correct quote alongside the incorrect one is scored the same
+  as citing the wrong one alone, not as citing the correct one.
 
 SECTION 2 — Plot description (is the description physically accurate?):
   1 = Misidentifies axes, color bar, or plot type entirely
@@ -210,7 +223,19 @@ implies it, consistent with its labeled truth value), "contradicted"
   5 = 100% of required claims correctly confirmed (or the section has
       only optional claims and none are contradicted)
   NOTE (S1 only): citing the wrong event type (collision vs non-collision)
-  contradicts every S1 claim and is an automatic score of 1.
+  contradicts every S1 claim and is an automatic score of 1. This includes
+  citing/applying BOTH event types' criteria without clearly selecting and
+  committing to only the correct one — the presence of the correct quote
+  does not confirm a claim if the incorrect quote is also cited or applied
+  alongside it.
+
+  EVIDENCE REQUIREMENT: for every claim verdict, the "comment" field must
+  ground the verdict in a short quoted or closely-paraphrased excerpt from
+  the response (or explicitly state "response does not address this" for an
+  omitted verdict). Do not write a comment that only restates the claim —
+  point to the specific text that justifies confirmed/contradicted, so the
+  verdict can be spot-checked against the response without re-reading it in
+  full.
 
 SECTION 4 — Final decision (does the Good/Bad verdict match truth?):
   1 = Wrong verdict with no justification
@@ -248,7 +273,7 @@ above, no omissions:
   "s4_decision":          {{"score": <1-5>, "comment": "<one sentence>"}},
   "overall":              {{"score": <1-5>, "comment": "<one sentence>"}},
   "claims": {{
-    "<claim_id>": {{"verdict": "confirmed|contradicted|omitted", "comment": "<short, optional>"}},
+    "<claim_id>": {{"verdict": "confirmed|contradicted|omitted", "comment": "<quote or closely paraphrase the specific response text the verdict is based on; for omitted, say so explicitly>"}},
     ...
   }}
 }}
@@ -1356,69 +1381,90 @@ def plot_comparison(
     return axes if len(row_vals) > 1 else axes[0, 0]
 
 
-def compare_evaluations(
+def plot_delta_heatmap(
     df_eval: pd.DataFrame,
     row_col: str,
     compare_col: str,
     val_a,
     val_b,
+    title: str,
+    out_path: 'Path | None' = None,
     *,
+    subplot_col: 'str | None' = None,
     run_id=None,
     plot_name=None,
     model=None,
     judge_model=None,
+    agg: str = 'mean',
     score_cols: 'list[str]' = SCORE_COLS,
-) -> pd.DataFrame:
-    """
-    Per-row_col, per-section delta table: mean(score | compare_col=val_b) -
-    mean(score | compare_col=val_a), for two slices of df_eval.
-
-    run_id, plot_name, model, judge_model — filter controls, same convention
-      as plot_section_heatmap (None = all, exact value, or list to restrict
-      to). Use these to pin down every dimension except row_col and
-      compare_col, e.g. run_id=RUN_ID, judge_model=JUDGE to compare
-      compare_col='judge_model', val_a=JUDGE, val_b=f'{JUDGE}#claims-v3'
-      (claims vs holistic, judge_model itself is the compare axis so leave
-      it out of the judge_model filter), or model=... , judge_model=JUDGE
-      to compare compare_col='run_id', val_a='YAML', val_b='YAML_ref_captioned'.
-
-    Returns a DataFrame indexed by row_col values, columns = score_cols,
-    values = the delta — ready to hand to plot_delta_heatmap as the z axis.
-    """
-    sub = _apply_filters(df_eval, run_id=run_id, plot_name=plot_name, model=model, judge_model=judge_model)
-    sub_a = sub[sub[compare_col] == val_a]
-    sub_b = sub[sub[compare_col] == val_b]
-    row_vals = sorted(set(sub_a[row_col].dropna()) | set(sub_b[row_col].dropna()), key=str)
-    piv_a = sub_a.groupby(row_col)[score_cols].mean().reindex(row_vals)
-    piv_b = sub_b.groupby(row_col)[score_cols].mean().reindex(row_vals)
-    return (piv_b - piv_a)
-
-
-def plot_delta_heatmap(
-    delta: pd.DataFrame,
-    title: str,
-    out_path: 'Path | None' = None,
-    *,
     vmax: 'float | None' = None,
 ):
     """
-    Heatmap of a delta table from compare_evaluations(): rows = row_col
-    values, columns = sections, cells = delta (b - a). Diverging colormap
-    centered at 0 (green = improvement, red = regression).
+    Heatmap of delta = agg(score | compare_col=val_b) - agg(score | compare_col=val_a),
+    rows = row_col values, columns = sections. Diverging colormap centered at
+    0 (green = improvement, red = regression).
 
-    vmax: symmetric color-scale bound (defaults to the largest |delta| in
-      the table, floored at 0.1 to avoid a degenerate all-zero scale).
+    Same controls as plot_section_heatmap: subplot_col draws one panel per
+    subplot_col value (e.g. one per model), each with its own delta table
+    over its row_col rows (e.g. run_id). A list judge_model with no explicit
+    subplot_col auto-splits into one panel per judge, same as
+    plot_section_heatmap.
+
+    run_id, plot_name, model, judge_model — filter controls (None = all,
+      exact value, or list to restrict to). Pin down every dimension except
+      row_col, compare_col, and subplot_col — e.g. run_id=RUN_ID,
+      judge_model=JUDGE to compare compare_col='judge_model', val_a=JUDGE,
+      val_b=f'{JUDGE}#claims-v3' (claims vs holistic; leave judge_model out
+      of the filter since it's the compare axis itself), or
+      row_col='run_id', compare_col='run_id', val_a='YAML',
+      val_b='YAML_ref_captioned', subplot_col='model_short', model=[...] to
+      compare the same two run_ids across several models, one panel each.
+    run_number — never filtered; always collapsed via `agg`
+      ('mean' default, 'median', or 'std').
+
+    vmax: symmetric color-scale bound, shared across all subplot panels
+      (defaults to the largest |delta| across all panels, floored at 0.1).
+
+    Returns the Axes (single panel) or a list of Axes (one per subplot_col
+    value).
     """
-    row_vals = list(delta.index)
-    if vmax is None:
-        abs_vals = np.abs(delta.values)
-        vmax = max(float(np.nanmax(abs_vals)) if np.isfinite(abs_vals).any() else 0.0, 0.1)
-    fig, ax = plt.subplots(figsize=(9, max(2.5, 0.55 * len(row_vals) + 1.5)))
-    _draw_heatmap_panel(
-        ax, delta, row_vals, SECTION_LABELS,
-        cmap='RdYlGn', vmin=-vmax, vmax=vmax, cbar_label='Δ score',
-        title=title, fmt='{:+.1f}',
+    if subplot_col is None and isinstance(judge_model, (list, tuple, set)):
+        subplot_col = 'judge_model'
+    sub_all = _apply_filters(df_eval, run_id=run_id, plot_name=plot_name, model=model, judge_model=judge_model)
+    panels  = (
+        sorted(sub_all[subplot_col].dropna().unique(), key=str)
+        if subplot_col is not None else [None]
     )
+
+    panel_data = []
+    for panel_val in panels:
+        panel_sub = sub_all if panel_val is None else sub_all[sub_all[subplot_col] == panel_val]
+        sub_a = panel_sub[panel_sub[compare_col] == val_a]
+        sub_b = panel_sub[panel_sub[compare_col] == val_b]
+        row_vals = sorted(set(sub_a[row_col].dropna()) | set(sub_b[row_col].dropna()), key=str)
+        piv_a = sub_a.groupby(row_col)[score_cols].agg(agg).reindex(row_vals)
+        piv_b = sub_b.groupby(row_col)[score_cols].agg(agg).reindex(row_vals)
+        panel_data.append((panel_val, row_vals, piv_b - piv_a))
+
+    if vmax is None:
+        abs_vals = np.concatenate([np.abs(d.values).ravel() for _, _, d in panel_data]) \
+            if panel_data else np.array([])
+        vmax = max(float(np.nanmax(abs_vals)) if abs_vals.size and np.isfinite(abs_vals).any() else 0.0, 0.1)
+
+    heights = [max(2.5, 0.55 * len(row_vals) + 1.5) for _, row_vals, _ in panel_data]
+    fig, axes = plt.subplots(
+        len(panel_data), 1, figsize=(9, sum(heights)),
+        gridspec_kw={'height_ratios': heights}, squeeze=False,
+    )
+
+    for i, (panel_val, row_vals, delta) in enumerate(panel_data):
+        panel_title = title if panel_val is None else f'{title}  |  {short_name(str(panel_val))}'
+        _draw_heatmap_panel(
+            axes[i, 0], delta, row_vals, SECTION_LABELS,
+            cmap='RdYlGn', vmin=-vmax, vmax=vmax, cbar_label='Δ score',
+            title=panel_title, fmt='{:+.1f}',
+        )
+
     plt.tight_layout()
     _save(fig, out_path)
-    return ax
+    return axes[0, 0] if subplot_col is None else list(axes[:, 0])

@@ -90,6 +90,52 @@ PRESETS: dict[str, BatchConfig] = {
             398199: "cosmics",
         }),
     ),
+    # Next campaign: input images fetched from the live DQM GUI API
+    # (fetch_gui_cli.py) instead of locally-rendered ROOT plots — the GUI's
+    # own rendering is what shifters actually see and may resolve color-scale
+    # discrepancies the local renderer introduces. Scoped to
+    # L1T_00_CaloLayer1ECALoccupancy, the only plot with a claims/*.yaml
+    # checklist, so claims-v3 grading applies. Populate images_api/ first:
+    #   python3 fetch_gui_cli.py --runs 398185 398186 398187 398188 398189 \
+    #       398191 398194 398199 --subsystem L1T --plot 00 \
+    #       --dataset '/ZeroBias/Run2024C-PromptReco-v1/DQMIO' --outdir images_api
+    # then run_batch_cli.py --preset yaml_context_api, then evaluate:
+    #   python3 evaluate_cli.py --run-ids YAMLCONtext \
+    #       --plots L1T_00_CaloLayer1ECALoccupancy \
+    #       --judge-model openai/gpt-oss-120b
+    "yaml_context_api": BatchConfig(
+        run_id="YAMLCONtext",
+        image_root=Path("images_api"),
+        output_root=Path("results"),
+        ref_dir=Path("ref_images"),
+        plot_filter=["L1T_00_CaloLayer1ECALoccupancy"],
+        models=[
+            "qwen/qwen3.6",
+            "google/gemma3-27b",
+            "google/gemma4-31b",
+            "asksage-overflow/claude-haiku-4-5",
+            "asksage-overflow/claude-opus-4-8",
+            "asksage-overflow/claude-opus-5",
+            "asksage-overflow/claude-sonnet-4-6",
+            "asksage-overflow/gpt-5.6-luna",
+            "asksage-overflow/gpt-5.6-sol",
+            "asksage-overflow/gpt-5.6-terra",
+        ],
+        context=YAMLContext(),
+        system_prompt=SYSTEM_PROMPT,
+        prompt="",
+        delay=1.5,
+        run_metadata=RunMetadata(event_type_map={
+            398185: "collisions",
+            398186: "cosmics",
+            398187: "circulating",
+            398188: "collisions",
+            398189: "collisions",
+            398191: "collisions",
+            398194: "cosmics",
+            398199: "cosmics",
+        }),
+    ),
     "localrag": BatchConfig(
         run_id="localRAG",
         image_root=Path("images"),

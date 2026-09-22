@@ -8,13 +8,32 @@ claims:
       neighboring pixels must be reported.
     truth: true
 
-  - id: s1_cites_cosmic_rule
+  - id: s1_cites_cosmic_cause
     section: s1_instruction_quote
     applies_to: noncollision
     text: >-
-      Cites the non-collision/cosmic criterion: large white areas may appear
-      because sections aren't in the run; occupancy is dominated by noise and
-      more variance is normal and not a concern.
+      Cites the cause: large white areas may appear simply because the
+      corresponding calorimeter sections are not included in the run.
+    truth: true
+
+  - id: s1_cites_cosmic_conclusion
+    section: s1_instruction_quote
+    applies_to: noncollision
+    text: >-
+      Cites the conclusion: occupancy is dominated by noise and more
+      variance is normal and not a concern.
+    truth: true
+
+  - id: s1_does_not_cite_wrong_rule
+    section: s1_instruction_quote
+    applies_to: any
+    text: >-
+      Does not cite or apply the quality criterion for the OTHER event type
+      (e.g. quoting or applying the collision fill criterion for a
+      non-collision run, or vice versa). Quoting/dumping the wrong-event-type
+      criterion alongside the correct one — even if the correct one is also
+      present — CONTRADICTS this claim; it does not count as confirmed just
+      because the correct quote also appears somewhere in the response.
     truth: true
 
   - id: s2_center_ieta0_empty
