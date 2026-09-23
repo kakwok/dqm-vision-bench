@@ -2,8 +2,11 @@
 Runtime settings for the MCP server, read once from the environment.
 
 All paths are resolved relative to the repository root so the server behaves
-the same regardless of the client's working directory. Every knob has a
-default; nothing here is required for the server to start.
+the same regardless of the client's working directory. Everything the server
+writes (fetched images, GUI cache, saved answers) lives under one directory,
+DQM_MCP_DATA_DIR (default dqm_mcp_data/), and may never overlap the batch and
+testing locations images/, .dqm_cache/ and results/. The model and provider
+are required, but that is enforced at startup in __main__, not here.
 """
 from __future__ import annotations
 
@@ -12,6 +15,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+
+# Written by the batch/testing tools; the server must not read or write them.
+PROTECTED_DIRS = ("images", ".dqm_cache", "results")
 
 
 def _env_int(name: str, default: int) -> int:
@@ -30,9 +36,23 @@ def _env_path(name: str, default: str) -> Path:
     return p if p.is_absolute() else REPO_ROOT / p
 
 
+def _check_not_protected(name: str, path: Path) -> Path:
+    resolved = path.resolve()
+    for d in PROTECTED_DIRS:
+        protected = (REPO_ROOT / d).resolve()
+        if resolved == protected or protected in resolved.parents:
+            raise ValueError(
+                f"{name} resolves to {resolved}, inside {d}/, which the batch/testing "
+                f"tools use. MCP outputs must stay out of it; unset {name} to use "
+                f"the default under dqm_mcp_data/."
+            )
+    return path
+
+
 @dataclass(frozen=True)
 class Settings:
     workspace: str
+    data_dir: Path
     image_root: Path
     results_root: Path
     run_id: str
@@ -48,16 +68,24 @@ class Settings:
 
     @classmethod
     def from_env(cls) -> "Settings":
+        data_dir = _check_not_protected("DQM_MCP_DATA_DIR", _env_path("DQM_MCP_DATA_DIR", "dqm_mcp_data"))
+
+        def output(name: str, sub: str) -> Path:
+            # Per-location override, else a subdirectory of the data dir.
+            path = _env_path(name, "") if os.environ.get(name, "").strip() else data_dir / sub
+            return _check_not_protected(name, path)
+
         return cls(
             # Online is the only workspace verified against cmsweb; offline
             # needs a dataset string and is deliberately not exposed.
             workspace="online",
-            image_root=_env_path("DQM_MCP_IMAGE_ROOT", "images"),
-            results_root=_env_path("DQM_MCP_RESULTS_ROOT", "results"),
+            data_dir=data_dir,
+            image_root=output("DQM_MCP_IMAGE_ROOT", "images"),
+            results_root=output("DQM_MCP_RESULTS_ROOT", "results"),
             run_id=os.environ.get("DQM_MCP_RUN_ID", "MCP").strip() or "MCP",
             ref_dir=_env_path("DQM_MCP_REF_DIR", "ref_images"),
             store_dir=_env_path("DQM_MCP_STORE_DIR", "plot_instructions"),
-            cache_dir=_env_path("DQM_MCP_CACHE_DIR", ".dqm_cache"),
+            cache_dir=output("DQM_MCP_CACHE_DIR", "cache"),
             width=_env_int("DQM_MCP_WIDTH", 900),
             height=_env_int("DQM_MCP_HEIGHT", 700),
             model=os.environ.get("OWUI_MODEL", "").strip(),
@@ -70,6 +98,7 @@ class Settings:
         """Settings safe to show to a client (paths and limits, no secrets)."""
         return {
             "workspace": self.workspace,
+            "data_dir": str(self.data_dir),
             "image_root": str(self.image_root),
             "results_root": str(self.results_root),
             "run_id": self.run_id,
@@ -78,8 +107,8 @@ class Settings:
             "store_dir": str(self.store_dir),
             "cache_dir": str(self.cache_dir),
             "image_size": [self.width, self.height],
-            "default_model": self.model or None,
-            "default_provider": self.provider or None,
+            "model": self.model or None,
+            "provider": self.provider or None,
             "max_images_per_call": self.max_images_per_call,
             "max_fetches_per_hour": self.max_fetches_per_hour,
         }

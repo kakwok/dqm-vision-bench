@@ -34,8 +34,11 @@ How to use:
 - A plot with several panels (n_panels > 1) is fetched and judged as ONE plot with one verdict.
 - query_plot needs event_type from the operator (collisions | cosmics | circulating); the
   server does not look it up.
-- The model and provider default to the server's environment (OWUI_MODEL, DEFAULT_PROVIDER)
-  and can be overridden per call.
+- The model and provider are fixed when the server starts; server_status shows them.
+  Do not try to choose a model.
+- get_plot_images returns the input panels and the reference images, each preceded by a
+  text label saying which is which; query_plot returns only their paths. Some clients
+  cannot display images.
 - Fetches from the DQM GUI are rate-limited (per call and per rolling hour); cached plots
   are always served. See server_status for the remaining budget and proxy state.
 """
@@ -126,44 +129,72 @@ def build_app() -> MCPServer:
             return context.instructions_for(resolve.group_for(subsystem, plot_number, folder))
 
     @app.tool()
-    def fetch_plot_image(run: int, subsystem: str, plot_number: str,
-                         folder: str | None = None, overwrite: bool = False):
+    def get_plot_images(run: int | None, subsystem: str, plot_number: str,
+                        folder: str | None = None, include_input: bool = True,
+                        include_references: bool = True, overwrite: bool = False):
         """
-        Fetch every panel of a plot for a run from the online DQM GUI and return the PNGs
-        followed by a metadata dict (urls, paths, sizes, sources, placeholder flags, budget).
-        Subject to the fetch guardrail.
+        The images behind a verdict: the plot's input panels for a run (fetched from the
+        online DQM GUI if not already stored) and the reference images for the plot type.
+        Each image is preceded by a text label ("Input panel i of N" / "Reference k of M"),
+        and a metadata dict (urls, paths, sources, placeholder flags, budget) comes last.
+        run is required when include_input is true. Only input panels that hit the network
+        count against the fetch guardrail; references are local and free.
         """
         with _guarded():
             group = resolve.group_for(subsystem, plot_number, folder)
-            fetched = fetch.fetch_group(run, group, overwrite=overwrite)
-            meta = {
-                "run": int(fetch.run_display(run)),
+            content: list[Any] = []
+            meta: dict[str, Any] = {
+                "run": None,
                 "subsystem": group.subsystem,
                 "plot_number": group.plot_number,
                 "folder": group.folder,
                 "title": group.title,
                 "n_panels": group.n_panels,
-                "panels": [f.meta() for f in fetched],
-                "budget": get_budget().status(),
             }
-            return [Image(data=f.path.read_bytes(), format="png") for f in fetched] + [meta]
+
+            if include_input:
+                if run is None:
+                    raise ValueError("run is required when include_input is true.")
+                run_text = fetch.run_display(run)
+                fetched = fetch.fetch_group(run_text, group, overwrite=overwrite)
+                meta["run"] = int(run_text)
+                meta["panels"] = [f.meta() for f in fetched]
+                for i, f in enumerate(fetched, start=1):
+                    content.append(f"Input panel {i} of {len(fetched)}: {f.stem} "
+                                   f"(run {run_text}, source {f.source})")
+                    content.append(Image(data=f.path.read_bytes(), format="png"))
+
+            if include_references:
+                # Keyed on the first panel's stem; the file need not exist.
+                refs = query.references_for(fetch.image_path_for(group, group.stems[0], run or 0))
+                meta["reference_images"] = [str(r) for r in refs]
+                if not refs:
+                    content.append(f"No reference images for {group.folder} "
+                                   f"under {get_settings().ref_dir}.")
+                for k, r in enumerate(refs, start=1):
+                    content.append(f"Reference {k} of {len(refs)}: {r.name}")
+                    content.append(Image(data=r.read_bytes(), format="png"))
+
+            meta["budget"] = get_budget().status()
+            return content + [meta]
 
     @app.tool()
     def query_plot(run: int, subsystem: str, plot_number: str, event_type: EventType,
-                   folder: str | None = None, model: str | None = None,
-                   provider: str | None = None, use_cache: bool = True,
+                   folder: str | None = None, use_cache: bool = True,
                    overwrite_image: bool = False) -> dict[str, Any]:
         """
         End to end: fetch the plot (all panels) for a run, attach the shifter instructions,
         ask the vision model, and return the raw response plus parsed sections and a
-        GOOD/BAD verdict. event_type is required and comes from the operator. Results are
-        saved under results/<run_id>/<folder>/ and reused when use_cache is true.
+        GOOD/BAD verdict. event_type is required and comes from the operator. The model
+        and provider are configured on the server. To see the images that were judged,
+        call get_plot_images with the same run and plot. Results are saved under
+        dqm_mcp_data/results/<run_id>/<folder>/ and reused when use_cache is true.
         """
         with _guarded():
             group = resolve.group_for(subsystem, plot_number, folder)
             run_text = fetch.run_display(run)
             fetched = fetch.fetch_group(run_text, group, overwrite=overwrite_image)
-            model_name = query.resolve_model(model)
+            model_name = query.resolve_model()
 
             cached = results.cached_response(group, run_text, model_name) if use_cache else None
             if cached is not None and not cached.get("error"):
@@ -172,7 +203,7 @@ def build_app() -> MCPServer:
 
             result = query.ask_model(
                 [f.path for f in fetched], [f.stem for f in fetched],
-                run=run_text, event_type=event_type, model=model_name, provider=provider,
+                run=run_text, event_type=event_type, model=model_name,
             )
             result["result_file"] = str(results.save_response(group, run_text, result))
             return _assemble(group, run_text, result, cached=False, fetched=fetched,
@@ -180,12 +211,12 @@ def build_app() -> MCPServer:
 
     @app.tool()
     def get_cached_response(run: int, subsystem: str, plot_number: str,
-                            folder: str | None = None, model: str | None = None) -> dict[str, Any]:
-        """Return a previously saved query_plot answer for this run/plot/model, without fetching or querying."""
+                            folder: str | None = None) -> dict[str, Any]:
+        """Return a previously saved query_plot answer for this run/plot (server's model), without fetching or querying."""
         with _guarded():
             group = resolve.group_for(subsystem, plot_number, folder)
             run_text = fetch.run_display(run)
-            model_name = query.resolve_model(model)
+            model_name = query.resolve_model()
             cached = results.cached_response(group, run_text, model_name)
             if cached is None:
                 return {"found": False, "looked_in": str(results.result_file(group, run_text, model_name))}

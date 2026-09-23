@@ -34,17 +34,19 @@ def _owui():
     return owui_client
 
 
-def resolve_model(model: str | None) -> str:
-    name = (model or get_settings().model).strip()
+def resolve_model() -> str:
+    """The query model fixed at server startup (python -m dqm_mcp --model / OWUI_MODEL)."""
+    name = get_settings().model
     if not name:
         raise RuntimeError(
-            "No model configured. Pass model=<name> or set OWUI_MODEL in .env."
+            "No model configured on the server: start it with --model or set OWUI_MODEL in .env."
         )
     return name
 
 
-def resolve_provider(provider: str | None) -> str | None:
-    return (provider or get_settings().provider).strip() or None
+def resolve_provider() -> str | None:
+    """The query provider fixed at server startup (--provider / DEFAULT_PROVIDER)."""
+    return get_settings().provider or None
 
 
 def references_for(image_path: Path) -> list[Path]:
@@ -104,12 +106,11 @@ def ask_model(
     *,
     run: int | str,
     event_type: str,
-    model: str | None = None,
-    provider: str | None = None,
+    model: str,
 ) -> dict:
     o = _owui()
     spec = build_group_spec(paths, stems, run=run, event_type=event_type)
-    cfg = o.ModelConfig(name=resolve_model(model), provider=resolve_provider(provider))
+    cfg = o.ModelConfig(name=model, provider=resolve_provider())
     result = o.send_query(spec, model=cfg)
     result["image"] = ";".join(str(p) for p in paths)   # record every panel in the result file
     result["images"] = [str(p) for p in paths]

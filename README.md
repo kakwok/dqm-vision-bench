@@ -335,14 +335,23 @@ model is whatever you point it at through the provider registry in `owui_client.
 ### Run
 
 ```bash
-pixi run python -m dqm_mcp                                            # stdio (default)
-pixi run python -m dqm_mcp --transport streamable-http --host 127.0.0.1 --port 8000
+pixi run python -m dqm_mcp --model google/gemma4-31b --provider litellm     # stdio (default)
+pixi run python -m dqm_mcp --model google/gemma4-31b --provider litellm \
+    --transport streamable-http --host 127.0.0.1 --port 8000
 ```
 
 The server `chdir`s to the repository root, loads `.env` from there, and logs to stderr only.
-Prerequisites are the same as the CLIs: a valid X.509 proxy for fetching (see
-*Fetching from the DQM GUI*) and `OWUI_API_KEY` plus a provider URL/key in `.env` for
-querying. The server starts without either; the affected tools return a clear error.
+
+**The model and provider are chosen when the server starts, and are required.** Pass
+`--model` / `--provider`, or set `OWUI_MODEL` / `DEFAULT_PROVIDER` in `.env` (the flags win).
+The server refuses to start if either is missing, if the provider is not a key of
+`owui_client.PROVIDERS`, if that provider's `<NAME>_URL` / `<NAME>_API_KEY` are unset, or if
+`OWUI_API_KEY` is unset. Clients cannot choose or change the model; `server_status` reports it.
+Whether the model name exists is not checked at startup (no network call); a wrong name
+shows up as an `error` in the first `query_plot` result.
+
+Fetching also needs a valid X.509 proxy (see *Fetching from the DQM GUI*); the server starts
+without one and `get_plot_images` (input panels) / `query_plot` return a clear error.
 
 Generic client configuration (the shape every MCP client accepts, key names vary):
 
@@ -391,12 +400,17 @@ visible on the network unless a TLS proxy sits in front.
 | `list_subsystems` | — | subsystems with plot counts and whether `plot_instructions/<sub>.yaml` exists |
 | `list_plots` | `subsystem` | one row per plot: `plot_number`, `title`, `folder`, `n_panels`, ME paths |
 | `get_plot_instructions` | `subsystem`, `plot_number`, [`folder`] | instruction text, known issues, layout description |
-| `fetch_plot_image` | `run`, `subsystem`, `plot_number`, [`folder`, `overwrite`] | one PNG per panel + metadata (URLs, paths, sizes, sources, placeholder flags, budget) |
-| `query_plot` | `run`, `subsystem`, `plot_number`, `event_type`, [`folder`, `model`, `provider`, `use_cache`, `overwrite_image`] | raw response, `sections` (instructions/observations/assessment/verdict_text), `verdict` GOOD/BAD/null, latencies, `cached`, `result_file`, `budget` |
-| `get_cached_response` | `run`, `subsystem`, `plot_number`, [`folder`, `model`] | a saved `query_plot` answer, or `found: false` |
-| `server_status` | — | proxy state, default model/provider, budget, configured paths |
+| `get_plot_images` | `run`, `subsystem`, `plot_number`, [`folder`, `include_input`, `include_references`, `overwrite`] | labeled images: each input panel ("Input panel i of N") and each reference ("Reference k of M: <file>"), then metadata (URLs, paths, sources, placeholder flags, reference paths, budget). `run` is needed only for input panels; references need no run, proxy or budget |
+| `query_plot` | `run`, `subsystem`, `plot_number`, `event_type`, [`folder`, `use_cache`, `overwrite_image`] | raw response, `sections` (instructions/observations/assessment/verdict_text), `verdict` GOOD/BAD/null, latencies, `cached`, `result_file`, `budget` |
+| `get_cached_response` | `run`, `subsystem`, `plot_number`, [`folder`] | a saved `query_plot` answer for the server's model, or `found: false` |
+| `server_status` | — | proxy state, the server's model/provider, budget, configured paths |
 
 Semantics worth knowing:
+
+- **Viewing images.** `query_plot` returns only paths and URLs, to keep it small; call
+  `get_plot_images` to see the input and reference images that were judged. Some clients
+  do not display images from MCP tools; OpenWorker, for example, shows them as `[image]`.
+  With those clients, use the paths in the metadata instead.
 
 - **Plot numbers** are the leading token of the shift-layout title (`'02'`, `'B'`);
   unpadded digits are accepted. When one number covers several distinct plots (e.g.
@@ -404,8 +418,8 @@ Semantics worth knowing:
 - **Multi-panel plots.** Shift-layout entries that share a number and title (the `_grpN`
   stems from `build_image_config`) are one plot. All panels are fetched and sent in a
   single model message, giving one response and one verdict. Results are saved as
-  `results/<run_id>/<folder>/<folder>_run<RUN>_<model>.txt` in the batch-pipeline format,
-  so `evaluate.py` can load them.
+  `dqm_mcp_data/results/<run_id>/<folder>/<folder>_run<RUN>_<model>.txt` in the
+  batch-pipeline format, so `evaluate.py` can load them (see *Where the server writes*).
 - **Run metadata is an input.** `query_plot` requires `event_type`
   (`collisions` | `cosmics` | `circulating`), which the operator supplies; the server does
   not look it up. It is appended to the prompt exactly as the batch pipeline does.
@@ -414,26 +428,100 @@ Semantics worth knowing:
 - **Guardrail.** Network fetches from the DQM GUI are capped per call
   (`DQM_MCP_MAX_IMAGES_PER_CALL`, default 12 — the largest plot has 11 panels) and per
   rolling hour (`DQM_MCP_MAX_FETCHES_PER_HOUR`, default 60). Panels already under
-  `images/` or in `.dqm_cache/` are free and always served. A call that would exceed the
+  `dqm_mcp_data/images/` or in `dqm_mcp_data/cache/` are free and always served. A call that would exceed the
   hourly budget is refused whole, with the remaining count and reset time in the error.
+
+### Where the server writes
+
+Everything the MCP server generates lives under one directory, `dqm_mcp_data/` at the
+repository root (gitignored; move it with `DQM_MCP_DATA_DIR`):
+
+```
+dqm_mcp_data/
+├── images/<folder>/<stem>_run<RUN>.png                     panels fetched from the DQM GUI
+├── cache/                                                  DQM GUI response cache
+└── results/<run_id>/<folder>/<folder>_run<RUN>_<model>.txt saved query_plot answers (run_id: MCP)
+```
+
+The server never reads or writes the batch/testing locations `images/`, `.dqm_cache/` or
+`results/`, so MCP use cannot change investigative results. It refuses to start if any
+output path is configured inside one of them. It only *reads* the shared inputs
+`ref_images/` and `plot_instructions/`.
+
+To score MCP answers with the judge, point the evaluator at the MCP results root:
+
+```bash
+python3 evaluate_cli.py --output-root dqm_mcp_data/results --run-ids MCP
+```
 
 ### Configuration
 
-All optional, read from the environment / `.env`:
+All variables are read from the environment or from `.env` at the repository root. Relative
+paths are resolved from the repository root. Settings are read once at startup; restart the
+server after changing them.
+
+**1. Model: required.** Clients cannot choose or change it.
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `OWUI_MODEL` / `DEFAULT_PROVIDER` | — / `litellm` | default model and provider for `query_plot` |
-| `DQM_MCP_TOKEN` | — | bearer token required by streamable-http (≥ 32 chars) |
-| `DQM_MCP_TOKEN_FILE` | — | file holding the token, used when `DQM_MCP_TOKEN` is unset |
-| `DQM_MCP_IMAGE_ROOT` | `images` | where fetched panels are written |
-| `DQM_MCP_RESULTS_ROOT` / `DQM_MCP_RUN_ID` | `results` / `MCP` | where answers are saved |
-| `DQM_MCP_REF_DIR` | `ref_images` | reference images root |
-| `DQM_MCP_STORE_DIR` | `plot_instructions` | instruction YAMLs |
-| `DQM_MCP_CACHE_DIR` | `.dqm_cache` | GUI response cache |
-| `DQM_MCP_WIDTH` / `DQM_MCP_HEIGHT` | `900` / `700` | rendered plot size |
-| `DQM_MCP_MAX_IMAGES_PER_CALL` | `12` | per-call panel cap |
-| `DQM_MCP_MAX_FETCHES_PER_HOUR` | `60` | rolling-hour network fetch cap |
+| `OWUI_MODEL` | **required** | model used by `query_plot`, e.g. `google/gemma4-31b`. `--model` overrides it |
+| `DEFAULT_PROVIDER` | **required** | provider for that model: `litellm`, `owui` or `nrp`. `--provider` overrides it |
+| `LITELLM_URL` / `LITELLM_API_KEY` | — | required when the provider is `litellm` |
+| `NRP_URL` / `NRP_API_KEY` | — | required when the provider is `nrp` (URL includes `/v1`) |
+| `OWUI_URL` | `https://openwebui.fnal.gov/` | Open WebUI endpoint, used when the provider is `owui` |
+| `OWUI_API_KEY` | **required** | always needed: `owui_client` refuses to load without it, and the `owui` provider uses it |
+
+The server refuses to start if the model or provider is missing, the provider is unknown, or
+its URL/key is unset. The model name itself is not checked until the first `query_plot`.
+
+**2. HTTP authentication: required for `--transport streamable-http` only.**
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `DQM_MCP_TOKEN` | — | bearer token clients must send (`Authorization: Bearer …`), at least 32 characters |
+| `DQM_MCP_TOKEN_FILE` | — | path to a file holding the token, used when `DQM_MCP_TOKEN` is unset |
+
+**3. Storage for MCP outputs.** See *Where the server writes*.
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `DQM_MCP_DATA_DIR` | `dqm_mcp_data` | root for everything the server writes |
+| `DQM_MCP_IMAGE_ROOT` | `$DQM_MCP_DATA_DIR/images` | fetched panels (override only if needed) |
+| `DQM_MCP_CACHE_DIR` | `$DQM_MCP_DATA_DIR/cache` | DQM GUI response cache (override only if needed) |
+| `DQM_MCP_RESULTS_ROOT` | `$DQM_MCP_DATA_DIR/results` | saved answers (override only if needed) |
+| `DQM_MCP_RUN_ID` | `MCP` | subdirectory of the results root, the `--run-ids` value for `evaluate_cli.py` |
+
+**4. Inputs: read-only, shared with the batch pipeline.**
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `DQM_MCP_REF_DIR` | `ref_images` | reference images, `<ref_dir>/<subsystem>/<folder>/*.png` |
+| `DQM_MCP_STORE_DIR` | `plot_instructions` | shifter instruction YAMLs, `<store_dir>/<subsystem>.yaml` |
+
+**5. Rendering and fetch guardrail.**
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `DQM_MCP_WIDTH` / `DQM_MCP_HEIGHT` | `900` / `700` | size of the plot rendered by the DQM GUI, in pixels |
+| `DQM_MCP_MAX_IMAGES_PER_CALL` | `12` | most panels one tool call may touch |
+| `DQM_MCP_MAX_FETCHES_PER_HOUR` | `60` | network fetches to the DQM GUI per rolling hour (disk/cache hits are free) |
+
+Example `.env` for an HTTP deployment on LPC (placeholders, fill in your own values):
+
+```bash
+# model (required)
+OWUI_MODEL=google/gemma4-31b
+DEFAULT_PROVIDER=litellm
+LITELLM_URL=https://<litellm-host>
+LITELLM_API_KEY=<key>
+OWUI_API_KEY=<key>
+# HTTP auth (required for streamable-http)
+DQM_MCP_TOKEN=<output of: python -c "import secrets; print(secrets.token_urlsafe(32))">
+# everything else is optional; outputs go to dqm_mcp_data/
+```
+
+Keep `.env` private (`chmod 600 .env`): it holds keys and the token, and LPC login nodes are
+shared.
 
 Layout: `resolve.py` (plot lookup), `fetch.py` (GUI, budget), `context.py` (instructions),
 `query.py` (model), `parse.py` (sections/verdict), `results.py` (result files),

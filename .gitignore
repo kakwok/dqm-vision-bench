@@ -6,3 +6,4 @@ __pycache__/
 graphrag_cache/
 graphrag_out/
 .dqm_cache/
+dqm_mcp_data/

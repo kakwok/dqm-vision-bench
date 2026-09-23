@@ -7,7 +7,7 @@ reference-image lookup both key off the image's parent directory.
 
 Sources, cheapest first:
   disk     the PNG already exists under image_root (free)
-  cache    the GUI response is in .dqm_cache (free, no proxy needed)
+  cache    the GUI response is in cache_dir, dqm_mcp_data/cache (free, no proxy needed)
   network  a real request to cmsweb (counts against the budget, needs a proxy)
 """
 from __future__ import annotations
