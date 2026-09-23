@@ -336,7 +336,7 @@ model is whatever you point it at through the provider registry in `owui_client.
 
 ```bash
 pixi run python -m dqm_mcp                                            # stdio (default)
-pixi run python -m dqm_mcp --transport streamable-http --host 0.0.0.0 --port 8000
+pixi run python -m dqm_mcp --transport streamable-http --host 127.0.0.1 --port 8000
 ```
 
 The server `chdir`s to the repository root, loads `.env` from there, and logs to stderr only.
@@ -354,9 +354,35 @@ Generic client configuration (the shape every MCP client accepts, key names vary
 client cannot set a working directory, use
 `pixi run --manifest-path /path/to/dqm-vision-bench/pixi.toml python -m dqm_mcp` instead.
 
-For HTTP clients, the endpoint is `http://<host>:<port>/mcp`. There is no authentication
-on that endpoint: anyone who can reach it spends your model budget and fetches with your
-grid identity, so keep it on localhost or behind your own proxy.
+For HTTP clients, the endpoint is `http://<host>:<port>/mcp`. It requires a bearer token,
+because anyone who can call it spends your model budget and fetches with your grid identity.
+Put a shared secret of at least 32 characters in `.env` (or point `DQM_MCP_TOKEN_FILE` at a
+file holding it); the server refuses to start over HTTP without one:
+
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(32))"   # -> DQM_MCP_TOKEN=... in .env
+```
+
+Clients send `Authorization: Bearer <token>` on every request; anything else gets `401`.
+
+```bash
+claude mcp add --transport http dqm http://127.0.0.1:8000/mcp --header "Authorization: Bearer $DQM_MCP_TOKEN"
+```
+
+```python
+import httpx2
+from mcp.client.streamable_http import streamable_http_client
+
+async with httpx2.AsyncClient(headers={"Authorization": f"Bearer {token}"},
+                              timeout=httpx2.Timeout(30, read=300)) as http, \
+           streamable_http_client("http://127.0.0.1:8000/mcp", http_client=http) as (read, write):
+    ...  # mcp.ClientSession(read, write)
+```
+
+The server binds to loopback only. To reach it from another machine, tunnel rather than
+exposing the port: `ssh -L 8000:127.0.0.1:8000 <server-host>`. A non-loopback `--host` is
+refused unless `--allow-remote` is passed; the traffic is plain HTTP, so the token is then
+visible on the network unless a TLS proxy sits in front.
 
 ### Tools
 
@@ -398,6 +424,8 @@ All optional, read from the environment / `.env`:
 | Variable | Default | Meaning |
 |---|---|---|
 | `OWUI_MODEL` / `DEFAULT_PROVIDER` | — / `litellm` | default model and provider for `query_plot` |
+| `DQM_MCP_TOKEN` | — | bearer token required by streamable-http (≥ 32 chars) |
+| `DQM_MCP_TOKEN_FILE` | — | file holding the token, used when `DQM_MCP_TOKEN` is unset |
 | `DQM_MCP_IMAGE_ROOT` | `images` | where fetched panels are written |
 | `DQM_MCP_RESULTS_ROOT` / `DQM_MCP_RUN_ID` | `results` / `MCP` | where answers are saved |
 | `DQM_MCP_REF_DIR` | `ref_images` | reference images root |
@@ -409,7 +437,7 @@ All optional, read from the environment / `.env`:
 
 Layout: `resolve.py` (plot lookup), `fetch.py` (GUI, budget), `context.py` (instructions),
 `query.py` (model), `parse.py` (sections/verdict), `results.py` (result files),
-`budget.py`, `config.py`; only `server.py` imports the MCP SDK. The others are plain
+`budget.py`, `config.py`, `auth.py` (HTTP bearer token); only `server.py` imports the MCP SDK. The others are plain
 functions usable from a notebook.
 
 ## Batch Querying

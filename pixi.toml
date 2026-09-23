@@ -16,7 +16,7 @@ matplotlib = "*"
 nbconvert = "*"
 nbclient = "*"
 networkx = "*"
-mcp = ">=1.28"
+mcp = ">=2"
 
 [pypi-dependencies]
 rank-bm25 = "*"
